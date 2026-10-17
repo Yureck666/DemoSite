@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Юрий Заботкин — Senior Unity Developer, Playable Ads</title>
+<meta name="description" content="Senior Unity Developer и Playable Ads специалист. 4.5+ года в мобильных играх и плееблах.">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container site-header__row">
+    <span class="site-header__name" id="headerName">Заботкин Юрий</span>
+    <nav class="site-header__nav" id="headerNav" aria-label="Основная навигация"></nav>
+    <div class="site-header__actions">
+      <div class="lang-switch" role="group" aria-label="Язык сайта">
+        <button type="button" id="langRu" aria-pressed="true">RU</button>
+        <button type="button" id="langEn" aria-pressed="false">EN</button>
+      </div>
+      <a class="btn btn--outline" id="headerResume" href="assets/resume/Zabotkin_Iurii_Resume_RU.pdf" download>
+        <span id="headerResumeLabel">Резюме PDF</span><span class="arrow">→</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero__grid">
+      <div>
+        <p class="mono hero__eyebrow" id="heroEyebrow"></p>
+        <h1 class="hero__title" id="heroTitle"></h1>
+        <div id="heroLede"></div>
+      </div>
+      <div>
+        <div class="hero__device-wrap">
+          <div class="phone phone--hero" id="heroPhone">
+            <div class="phone__edge"></div>
+            <div class="phone__body">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <iframe id="heroFrame" title="Potion or Poison — live demo"
+                  src="https://yureck666.github.io/FindObjectsTest/"
+                  loading="eager"
+                  allow="accelerometer; gyroscope"></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game Feel interactive demo -->
+  <section class="section gamefeel-section" id="gamefeel">
+    <div class="container">
+      <div class="gamefeel" data-reveal>
+        <div class="gamefeel__info">
+          <p class="gamefeel__label" id="gfEyebrow"></p>
+          <h3 class="gamefeel__title" id="gfTitle"></h3>
+          <p class="gamefeel__text" id="gfDesc"></p>
+        </div>
+
+        <div class="gamefeel__stage" id="gfStage">
+          <div class="gamefeel__counter">
+            <span class="gamefeel__coin" aria-hidden="true">
+              <span class="gamefeel__coin-shadow"></span>
+              <span class="gamefeel__coin-icon"></span>
+            </span>
+            <span class="sr-only" id="gfCounterSrLabel"></span>
+            <span class="gamefeel__value" id="gfCount">0</span>
+          </div>
+          <canvas class="gamefeel__fx" id="gfFx" aria-hidden="true"></canvas>
+          <button type="button" class="gamefeel__btn" id="gfButton"></button>
+        </div>
+
+        <div class="gamefeel__controls">
+          <div class="gamefeel__toggles" role="group" aria-label="Effects">
+            <button type="button" class="toggle" id="gfToggleEasing" data-effect="easing" aria-pressed="true">
+              <span class="toggle__switch" aria-hidden="true"></span><span id="gfToggleEasingLabel"></span>
+            </button>
+            <button type="button" class="toggle" id="gfToggleSquash" data-effect="squash" aria-pressed="true">
+              <span class="toggle__switch" aria-hidden="true"></span><span id="gfToggleSquashLabel"></span>
+            </button>
+            <button type="button" class="toggle" id="gfToggleParticles" data-effect="particles" aria-pressed="true">
+              <span class="toggle__switch" aria-hidden="true"></span><span id="gfToggleParticlesLabel"></span>
+            </button>
+            <button type="button" class="toggle" id="gfToggleCounter" data-effect="counter" aria-pressed="true">
+              <span class="toggle__switch" aria-hidden="true"></span><span id="gfToggleCounterLabel"></span>
+            </button>
+            <button type="button" class="toggle" id="gfToggleShake" data-effect="shake" aria-pressed="true">
+              <span class="toggle__switch" aria-hidden="true"></span><span id="gfToggleShakeLabel"></span>
+            </button>
+            <button type="button" class="toggle" id="gfToggleSound" data-effect="sound" aria-pressed="true">
+              <span class="toggle__switch" aria-hidden="true"></span><span id="gfToggleSoundLabel"></span>
+            </button>
+          </div>
+          <button type="button" class="gamefeel__all" id="gfToggleAll"></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Experience -->
+  <section class="section" id="experience">
+    <div class="container">
+      <div class="section__head" data-reveal>
+        <span class="section__index" id="expIndex"></span>
+        <h2 class="section__title" id="expTitle"></h2>
+      </div>
+      <div class="exp-list" id="expList"></div>
+    </div>
+  </section>
+
+  <!-- Projects -->
+  <section class="section section--paper2" id="projects">
+    <div class="container">
+      <div class="section__head" data-reveal>
+        <span class="section__index" id="projIndex"></span>
+        <h2 class="section__title" id="projTitle"></h2>
+      </div>
+
+      <div class="subsection" data-reveal>
+        <div class="subsection__head">
+          <h3 class="subsection__title" id="playablesTitle"></h3>
+        </div>
+        <p class="playables-caption" id="playablesTagline"></p>
+        <div class="playables-grid" id="playablesGrid"></div>
+        <p class="playables-caption playables-caption--nav" id="playablesNavTagline"></p>
+        <div class="playables-nav" id="playablesNav"></div>
+      </div>
+
+      <div class="subsection" data-reveal>
+        <div class="subsection__head">
+          <h3 class="subsection__title" id="gamesTitle"></h3>
+        </div>
+        <div class="games-row" id="gamesRow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stack -->
+  <section class="section section--invert" id="stack">
+    <div class="container">
+      <div class="section__head" data-reveal>
+        <span class="section__index" id="stackIndex"></span>
+        <h2 class="section__title" id="stackTitle"></h2>
+      </div>
+      <div class="stack-groups" id="stackGroups"></div>
+      <div class="languages-row" id="languagesRow"></div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="section" id="contact">
+    <div class="container contact__grid">
+      <div data-reveal>
+        <span class="section__index" id="contactIndex"></span>
+        <p class="contact__lede" id="contactLede"></p>
+      </div>
+      <ul class="contact__list" id="contactList" data-reveal></ul>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container site-footer__row">
+    <span id="footerText"></span>
+    <span>© <span id="footerYear"></span></span>
+  </div>
+</footer>
+
+<!-- Reusable playable modal -->
+<dialog class="player-modal" id="playerModal">
+  <div class="player-modal__bar">
+    <div class="player-modal__info">
+      <div class="player-modal__title" id="playerModalTitle">—</div>
+      <div class="player-modal__genre" id="playerModalGenre"></div>
+    </div>
+    <div class="player-modal__tools">
+      <button type="button" id="playerRestart" title="Restart">↻</button>
+      <a id="playerOpenNewTab" href="#" target="_blank" rel="noopener" title="Open in new tab">↗</a>
+      <button type="button" id="playerClose" title="Close">✕</button>
+    </div>
+  </div>
+  <div class="player-modal__stage">
+    <div class="phone phone--lg">
+      <div class="phone__edge"></div>
+      <div class="phone__body">
+        <div class="phone__notch"></div>
+        <div class="phone__screen">
+          <iframe id="playerFrame" title="Playable demo" src="about:blank" allow="accelerometer; gyroscope"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>

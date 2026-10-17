@@ -1,0 +1,893 @@
+/* ==========================================================================
+   Tokens — exact values from DESIGN.md. Do not add colors/sizes outside this.
+   ========================================================================== */
+:root {
+  --paper:   #F6F3EC;
+  --paper-2: #EBE6DA;
+  --ink:     #17171A;
+  --muted:   #6B6A66;
+  --accent:  #E8452C;
+  --rule:    1px solid rgba(23, 23, 26, 0.18);
+  --rule-ink: 1px solid rgba(246, 243, 236, 0.22);
+
+  --sp-1: 8px;
+  --sp-2: 16px;
+  --sp-3: 24px;
+  --sp-4: 48px;
+  --sp-5: 96px;
+
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-text: "Schibsted Grotesk", Georgia, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/* ==========================================================================
+   Reset
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body, h1, h2, h3, p, figure, dl, dd { margin: 0; }
+ul { margin: 0; padding: 0; list-style: none; }
+img, svg, video, iframe { display: block; max-width: 100%; }
+a { color: inherit; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+html {
+  scroll-behavior: smooth;
+  zoom: 0.8;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--sp-3);
+}
+@media (max-width: 640px) {
+  .container { padding: 0 var(--sp-2); }
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border: var(--rule);
+  color: var(--muted);
+}
+
+/* ==========================================================================
+   Header
+   ========================================================================== */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(246, 243, 236, 0.92);
+  backdrop-filter: none;
+  border-bottom: var(--rule);
+}
+.site-header__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-top: var(--sp-2);
+  padding-bottom: var(--sp-2);
+}
+.site-header__name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.site-header__nav {
+  display: flex;
+  gap: var(--sp-3);
+  flex: 1;
+  justify-content: center;
+}
+.site-header__nav a {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 2px;
+}
+.site-header__nav a:hover { border-bottom-color: var(--accent); color: var(--accent); }
+
+.site-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.lang-switch {
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  border: var(--rule);
+}
+.lang-switch button {
+  padding: 6px 10px;
+  color: var(--muted);
+}
+.lang-switch button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 9px 14px;
+  border-radius: 0;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.btn .arrow { transition: transform 150ms ease; }
+.btn:hover .arrow { transform: translateX(4px); }
+
+.btn--solid {
+  background: var(--accent);
+  color: var(--paper);
+  border: 1px solid var(--accent);
+}
+.btn--solid:hover { background: #cf3b24; border-color: #cf3b24; }
+
+.btn--outline {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+}
+.btn--outline:hover { background: var(--ink); color: var(--paper); }
+
+.btn--outline-invert {
+  background: transparent;
+  color: var(--paper);
+  border: 1px solid var(--paper);
+}
+.btn--outline-invert:hover { background: var(--paper); color: var(--ink); }
+
+@media (max-width: 860px) {
+  .site-header__nav { display: none; }
+}
+
+/* ==========================================================================
+   Hero
+   ========================================================================== */
+.hero {
+  padding: var(--sp-5) 0 var(--sp-4);
+  border-bottom: var(--rule);
+}
+.hero__grid {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: var(--sp-4);
+  align-items: center;
+}
+@media (max-width: 860px) {
+  .hero__grid {
+    grid-template-columns: 1fr;
+    gap: var(--sp-3);
+  }
+  .hero__device-wrap { order: -1; }
+}
+.hero__eyebrow {
+  color: var(--muted);
+  margin-bottom: var(--sp-2);
+}
+.hero__title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(40px, 6vw, 88px);
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  margin-bottom: var(--sp-3);
+}
+.hero__title em { font-style: italic; color: var(--accent); }
+.hero__lede {
+  max-width: 52ch;
+  font-size: 18px;
+  color: var(--ink);
+  margin-bottom: var(--sp-2);
+}
+.hero__lede + .hero__lede { margin-top: var(--sp-1); }
+
+.hero__device-wrap { display: flex; justify-content: center; }
+
+/* ==========================================================================
+   Phone frame — the one rounded, "physical" object on the page
+   ========================================================================== */
+.phone {
+  position: relative;
+  width: 312px;
+  aspect-ratio: 9 / 16;
+  --phone-radius: 34px;
+  /* Single global knob: percentages resolve against the phone's own box
+     (X against width, Y against height), so every size variant gets the
+     same proportional edge with no per-size tuning. */
+  --phone-edge-amount: 2%;
+  transform: perspective(900px) rotateX(6deg) rotateY(-18deg);
+  will-change: transform;
+}
+/* A solid silhouette of the phone sitting behind the body, offset toward
+   whichever corner the phone is leaning into. As the wobble tilts the phone,
+   JS re-aims this offset so a sliver of it keeps peeking out — a flat,
+   reliable stand-in for real thickness instead of fragile 3D side faces. */
+.phone__edge {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--phone-radius);
+  /* Light from the top-left, falling off toward the bottom-right — the same
+     corner the edge peeks out from — so it reads as a lit metal bevel. Dark
+     stop is mixed, not pure --ink: the visible sliver sits right next to the
+     --ink border/body, and matching it exactly made the edge disappear. */
+  background: linear-gradient(to bottom left, var(--muted) 45%, color-mix(in srgb, var(--ink) 65%, var(--muted) 35%) 55%);
+  /* Matches the rest-pose tilt (rotateX 6deg / rotateY -18deg): X gets the
+     full amount, Y gets a third of it, same ratio JS uses once it takes over. */
+  transform: translate(var(--phone-edge-amount), calc(var(--phone-edge-amount) / 3));
+  transition: background 420ms ease;
+}
+.phone__body {
+  position: absolute;
+  inset: 0;
+  border: 10px solid var(--ink);
+  border-radius: var(--phone-radius);
+  background: var(--ink);
+  overflow: hidden;
+  box-shadow: none;
+  transition: border-color 420ms ease;
+}
+.phone__notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 46%;
+  height: 20px;
+  background: var(--ink);
+  border-radius: 0 0 12px 12px;
+  z-index: 2;
+}
+.phone__screen {
+  position: absolute;
+  inset: 0;
+  background: var(--paper-2);
+}
+/* iframe and video are stacked (not just swapped) so activation can hand
+   off between them with a brief overlap instead of a hard cut — the video
+   stays on top for a beat after the iframe appears, masking the moment a
+   freshly-unhidden iframe needs to repaint. */
+.phone__screen iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  z-index: 1;
+}
+.phone__screen video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 2;
+}
+/* Transparent hit-target over a playable's screen. Captures the click when
+   the phone isn't the active one (so a tap selects it instead of reaching
+   the iframe); once active, pointer-events pass straight through to the
+   live playable underneath. */
+.phone__select {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.phone.is-active .phone__select { pointer-events: none; }
+.phone--lg { width: 300px; --phone-radius: 39px; }
+.phone--hero { width: 400px; --phone-radius: 52px; }
+@media (max-width: 1100px) {
+  .phone--hero { width: 320px; --phone-radius: 42px; }
+}
+@media (max-width: 480px) {
+  .phone--hero { width: 260px; --phone-radius: 34px; }
+}
+/* Playables podium — no idle wobble, frozen at the straightest pose the
+   wobble ever reaches (rotateX 2deg / rotateY -14deg), so the edge offset
+   formula (offset = 0 at 0deg, growing with angle) still holds: smaller,
+   calmer sliver than the hero's resting -18deg turn. */
+/* Active/inactive sizing is a transform: scale(), not a width change — the
+   phone's actual layout box (and the iframe inside it) stays a constant
+   312px at all times, so the iframe's content never has to re-resize
+   itself, and the row's height never shifts as the active phone changes. */
+.phone--static {
+  transform: perspective(900px) rotateX(2deg) rotateY(-14deg) scale(0.77);
+  transition: transform 420ms ease;
+}
+.phone--static.is-active {
+  transform: perspective(900px) rotateX(2deg) rotateY(-14deg) scale(1);
+}
+.phone--static .phone__edge {
+  transform: translate(calc(var(--phone-edge-amount) * 7 / 9), calc(var(--phone-edge-amount) / 9));
+}
+
+/* ==========================================================================
+   Section scaffolding
+   ========================================================================== */
+.section {
+  padding: var(--sp-5) 0;
+  border-bottom: var(--rule);
+}
+.section--invert {
+  background: var(--ink);
+  color: var(--paper);
+  border-bottom: none;
+}
+.section--invert .section__index,
+.section--invert .muted { color: rgba(246, 243, 236, 0.6); }
+.section--invert .tag { color: rgba(246, 243, 236, 0.7); border-color: rgba(246, 243, 236, 0.3); }
+.section--paper2 { background: var(--paper-2); }
+
+.section__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+.section__index {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+}
+.section__title {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 4vw, 56px);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+@media (max-width: 640px) {
+  .section__head { flex-direction: column; align-items: flex-start; }
+}
+
+.muted { color: var(--muted); }
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 360ms ease, transform 360ms ease;
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   Game Feel — interactive demo
+   ========================================================================== */
+.gamefeel-section { background: var(--paper-2); --coin: #F0B429; }
+.gamefeel {
+  display: grid;
+  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+  grid-template-areas:
+    "info    stage"
+    "controls stage";
+  column-gap: var(--sp-5);
+  row-gap: var(--sp-3);
+}
+@media (max-width: 860px) {
+  .gamefeel {
+    grid-template-columns: 1fr;
+    grid-template-areas: "info" "stage" "controls";
+    gap: var(--sp-3);
+  }
+}
+.gamefeel__info { grid-area: info; align-self: end; }
+.gamefeel__controls { grid-area: controls; align-self: start; }
+.gamefeel__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.gamefeel__label::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.gamefeel__title {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 2.9vw, 38px);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-top: var(--sp-2);
+}
+.gamefeel__text { max-width: 46ch; color: var(--muted); margin-top: var(--sp-2); }
+
+.gamefeel__stage {
+  grid-area: stage;
+  position: relative;
+  height: clamp(600px, 48vw, 720px);
+  background: transparent;
+  overflow: hidden;
+}
+.gamefeel__counter {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 28px 14px 14px;
+  border: var(--rule);
+  background: var(--paper);
+  font-family: var(--font-display);
+  font-size: 36px;
+  color: var(--ink);
+}
+.gamefeel__coin { position: relative; width: 40px; height: 40px; flex: none; }
+.gamefeel__coin-shadow { position: absolute; left: 0; top: 6px; width: 40px; height: 40px; border-radius: 50%; background: var(--ink); }
+.gamefeel__coin-icon { position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--coin); }
+.gamefeel__value { min-width: 2ch; font-variant-numeric: tabular-nums; }
+
+.gamefeel__fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+
+.gamefeel__btn {
+  position: absolute;
+  z-index: 2;
+  top: 56%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 704px;
+  height: 504px;
+  border: none;
+  background: url("../button_ru.png") center / 100% 100% no-repeat;
+  transition: transform 80ms ease, filter 150ms ease;
+  user-select: none;
+}
+/* Keyboard focus ring hugs the pill instead of ballooning outward from this oversized button. */
+.gamefeel__btn:focus-visible { outline-offset: -8px; }
+html[lang="en"] .gamefeel__btn { background-image: url("../button_en.png"); }
+.gamefeel__btn:hover { filter: brightness(1.08); }
+.gamefeel__btn:active { transform: translate(-50%, calc(-50% + 6px)); filter: brightness(0.96); }
+.gamefeel__stage.is-eased .gamefeel__btn { transition: transform 400ms cubic-bezier(.22, 1.6, .4, 1), background-color 150ms ease; }
+.gamefeel__stage.is-eased .gamefeel__btn:active { transition-duration: 70ms; }
+
+/* Toggles: real switch affordance — the one place a pill shape earns its keep */
+.gamefeel__toggles { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: var(--sp-2); }
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 0 8px;
+  height: 38px;
+  border: var(--rule);
+  font-family: var(--font-text);
+  font-size: 13px;
+  color: var(--muted);
+  transition: border-color 150ms ease, color 150ms ease;
+}
+.toggle:hover { border-color: var(--ink); color: var(--ink); }
+.toggle__switch {
+  position: relative;
+  width: 30px;
+  height: 18px;
+  flex: none;
+  border-radius: 999px;
+  background: rgba(23, 23, 26, 0.18);
+  transition: background-color 150ms ease;
+}
+.toggle__switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: translate 150ms ease, background-color 150ms ease;
+}
+.toggle[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
+.toggle[aria-pressed="true"] .toggle__switch { background: var(--accent); }
+.toggle[aria-pressed="true"] .toggle__switch::after { translate: 12px; background: var(--paper); }
+
+.gamefeel__all {
+  display: block;
+  margin-top: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.gamefeel__all:hover { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gamefeel__btn, .gamefeel__stage, .toggle__switch, .toggle__switch::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ==========================================================================
+   Experience
+   ========================================================================== */
+.exp-list { display: flex; flex-direction: column; }
+.exp-item {
+  display: grid;
+  grid-template-columns: 1fr 2.2fr;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-top: var(--rule);
+}
+.exp-item:last-child { border-bottom: var(--rule); }
+.exp-item__dates {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.exp-item__role {
+  font-family: var(--font-text);
+  font-weight: 500;
+  font-size: 20px;
+  margin-bottom: 2px;
+}
+.exp-item__org {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: var(--sp-2);
+}
+.exp-item__bullets li {
+  position: relative;
+  padding-left: 16px;
+  margin-bottom: 6px;
+  max-width: 68ch;
+}
+.exp-item__bullets li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 6px;
+  height: 1px;
+  background: var(--accent);
+}
+@media (max-width: 720px) {
+  .exp-item { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
+   Projects — playables podium + mobile game icons
+   ========================================================================== */
+.subsection { margin-top: var(--sp-5); }
+.subsection:first-of-type { margin-top: var(--sp-2); }
+.subsection__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+  padding-bottom: var(--sp-1);
+  border-bottom: var(--rule);
+  text-align: center;
+}
+.subsection__title {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.6vw, 32px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+/* Semi-transparent captions around the playables podium — decorative, not
+   informational, so low-contrast is intentional rather than an a11y bug. */
+.playables-caption {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(18px, 2vw, 24px);
+  color: rgba(232, 69, 44, 0.65);
+  margin: calc(-1 * var(--sp-1)) 0 var(--sp-2);
+  text-align: center;
+}
+.playables-caption--nav { margin: var(--sp-1) 0 var(--sp-2); }
+
+/* Playables podium — a horizontally scrollable strip, moved only by code
+   (clicking a phone), never by the user dragging it — so the scrollbar is
+   hidden rather than shown as a dead/confusing control. */
+.playables-grid {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-4);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 0 var(--sp-2) var(--sp-1);
+  scrollbar-width: none;
+  /* Scrolling here is code-driven only (see comment above) — touch-action
+     blocks the finger-swipe gesture but leaves JS's scrollLeft/scrollTo
+     untouched, and pan-y (not none) keeps vertical page scroll working
+     when the gesture starts on top of this row. */
+  touch-action: pan-y;
+  /* Explicit floor so the row never has to measure its own content to size
+     itself: active phone at 312px (aspect-ratio 9/16 → ~555px) + caption
+     (~16px gap + two lines of text) + a little slack. */
+  min-height: 648px;
+}
+.playables-grid::-webkit-scrollbar { display: none; }
+.playable-card { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; scroll-snap-align: center; }
+/* Accent border marks the active (centered) phone, not a fixed "featured"
+   one — it moves with selection, so it needs its own class, not --featured. */
+.phone.is-active .phone__body { border-color: var(--accent); }
+.phone.is-active .phone__edge { background: linear-gradient(to bottom left, color-mix(in srgb, var(--accent) 75%, var(--paper) 25%) 45%, color-mix(in srgb, var(--accent) 55%, var(--ink) 45%) 55%); }
+.playable-card__caption { margin-top: var(--sp-2); text-align: center; }
+.playable-card__title { font-family: var(--font-text); font-weight: 500; font-size: 16px; }
+.playable-card__genre { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--muted); margin-top: 2px; }
+@media (max-width: 720px) {
+  .playables-grid { gap: var(--sp-3); }
+}
+
+/* Playables nav — rounded icon buttons below the scroll, one per phone,
+   styled after the mobile game tiles below. Clicking one scrolls the
+   carousel to that playable, same as clicking its phone. */
+.playables-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-3); margin-top: var(--sp-3); }
+.playables-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  width: 96px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ink);
+  font-family: inherit;
+}
+.playables-nav__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--paper);
+  border: var(--rule);
+  overflow: hidden;
+  transition: border-color 150ms ease;
+}
+.playables-nav__icon img { width: 100%; height: 100%; object-fit: cover; }
+.playables-nav__item:hover .playables-nav__icon { border-color: var(--accent); }
+.playables-nav__item.is-active .playables-nav__icon { border-color: var(--accent); }
+.playables-nav__title { font-weight: 500; font-size: 12px; text-align: center; }
+.playables-nav__genre { font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-align: center; }
+
+/* Mobile games — rounded icon tiles */
+.games-row { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-3); }
+.game-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  width: 128px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.game-tile__icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  background: var(--paper);
+  border: var(--rule);
+  overflow: hidden;
+  transition: border-color 150ms ease;
+}
+.game-tile__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.game-tile:hover .game-tile__icon { border-color: var(--accent); }
+.game-tile__title { font-weight: 500; font-size: 14px; text-align: center; }
+.game-tile__meta { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: center; }
+
+/* ==========================================================================
+   Player modal — reused by hero + playable project cards
+   ========================================================================== */
+.player-modal {
+  border: none;
+  padding: 0;
+  width: fit-content;
+  max-width: 92vw;
+  max-height: 92vh;
+  background: transparent;
+  color: var(--paper);
+  overflow: visible;
+}
+.player-modal::backdrop {
+  background: rgba(23, 23, 26, 0.9);
+}
+.player-modal__bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+.player-modal__info { min-width: 0; }
+.player-modal__title {
+  font-family: var(--font-text);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--paper);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-modal__genre {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(246, 243, 236, 0.6);
+  margin-top: 2px;
+}
+.player-modal__tools { display: flex; gap: var(--sp-1); flex-shrink: 0; }
+.player-modal__tools button,
+.player-modal__tools a {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--paper);
+  border: 1px solid rgba(246, 243, 236, 0.35);
+}
+.player-modal__tools button:hover,
+.player-modal__tools a:hover { border-color: var(--paper); color: var(--accent); }
+.player-modal__stage {
+  display: flex;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   Stack / skills
+   ========================================================================== */
+.stack-groups {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-4) var(--sp-3);
+}
+@media (max-width: 860px) {
+  .stack-groups { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .stack-groups { grid-template-columns: 1fr; }
+}
+.stack-group__title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: var(--sp-2);
+  padding-bottom: var(--sp-1);
+  border-bottom: var(--rule-ink);
+}
+.section:not(.section--invert) .stack-group__title { border-bottom: var(--rule); }
+.stack-group__tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.languages-row {
+  display: flex;
+  gap: var(--sp-4);
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: var(--rule-ink);
+}
+.section:not(.section--invert) .languages-row { border-top: var(--rule); }
+.lang-item__name { font-family: var(--font-text); font-weight: 500; }
+.lang-item__level { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+/* ==========================================================================
+   Contact
+   ========================================================================== */
+.contact__grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: var(--sp-4);
+}
+@media (max-width: 720px) {
+  .contact__grid { grid-template-columns: 1fr; }
+}
+.contact__lede {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 3.4vw, 48px);
+  letter-spacing: -0.02em;
+  max-width: 18ch;
+}
+.contact__list { display: flex; flex-direction: column; }
+.contact__list a {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--sp-2) 0;
+  border-top: var(--rule-ink);
+  text-decoration: none;
+  font-size: 20px;
+}
+.section:not(.section--invert) .contact__list a { border-top: var(--rule); }
+.contact__list li:last-child a { border-bottom: var(--rule-ink); }
+.section:not(.section--invert) .contact__list li:last-child a { border-bottom: var(--rule); }
+.contact__list a:hover { color: var(--accent); }
+.contact__list .mono { color: var(--muted); }
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+.site-footer {
+  padding: var(--sp-3) 0;
+}
+.site-footer__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Utility
+   ========================================================================== */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
