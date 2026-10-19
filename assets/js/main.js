@@ -508,7 +508,10 @@
     var body = el("div", { className: "phone__body" });
     body.appendChild(el("div", { className: "phone__notch" }));
     var screen = el("div", { className: "phone__screen" });
-    var iframe = el("iframe", { title: p.title, allow: "accelerometer; gyroscope", src: p.url });
+    // No src yet — assigned by setupPlayablesCarousel, staggered so the
+    // phones that aren't shown first don't all fight for bandwidth/CPU
+    // at once on page load.
+    var iframe = el("iframe", { title: p.title, allow: "accelerometer; gyroscope" });
     // Cheap stand-in for the inactive state: a muted looping clip instead
     // of a live (but hidden) iframe, so sitting inactive costs ~nothing.
     var video = el("video", { src: p.preview, muted: true, loop: true, playsInline: true, preload: "auto" });
@@ -554,6 +557,17 @@
       grid.scrollTo({ left: grid.scrollLeft + delta, behavior: (instant || prefersReducedMotion) ? "auto" : "smooth" });
     }
 
+    // Assigns the real src immediately, cancelling any pending staggered
+    // load — used both by the stagger timers themselves and as a fallback
+    // when a phone gets clicked before its turn in the queue comes up.
+    function ensureLoaded(entry) {
+      clearTimeout(entry._loadTimer);
+      if (!entry._loaded) {
+        entry._loaded = true;
+        entry.iframe.src = entry.url;
+      }
+    }
+
     function selectPlayable(index, opts) {
       opts = opts || {};
       var entry = entries[index];
@@ -575,6 +589,7 @@
           prev.video.play();
         }
         entry.phone.classList.add("is-active");
+        ensureLoaded(entry); // in case it's picked before its staggered turn
         entry.iframe.style.display = "";
         if (navButtons) navButtons[index].classList.add("is-active");
         activeIndex = index;
@@ -620,16 +635,21 @@
     for (var i = 0; i < entries.length; i++) {
       if (entries[i].featured) { initial = i; break; }
     }
-    // Only the initially-active phone shows its live iframe; the rest load
-    // in the background (real src, per the "load immediately" requirement)
-    // but start out hidden behind their looping preview clip instead of
-    // flashing live then hiding.
+    // Only the initially-active phone's iframe loads right away. The rest
+    // start out hidden behind their preview clip and load staggered, one
+    // every STAGGER_MS, instead of all piling onto the network/CPU at once
+    // on page load (ensureLoaded fires early for any of them that get
+    // clicked before their turn comes up).
+    var STAGGER_MS = 700;
+    var backgroundSlot = 0;
     entries.forEach(function (entry, index) {
       if (index === initial) {
         entry.video.style.display = "none";
       } else {
         entry.iframe.style.display = "none";
         entry.video.play();
+        backgroundSlot++;
+        entry._loadTimer = setTimeout(function () { ensureLoaded(entry); }, STAGGER_MS * backgroundSlot);
       }
     });
     layout();
