@@ -8,7 +8,15 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Loaded non-blocking: a stylesheet link still pending makes browsers hold
+     off running every later <script> until it resolves, so a slow/stalled
+     fonts.googleapis.com request would otherwise delay main.js itself
+     (and with it everything that isn't hardcoded as static HTML, like the
+     hero text). preload+onload swap avoids that; noscript covers no-JS. -->
+<link rel="preload" as="style"
+  href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+  onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"></noscript>
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
@@ -46,10 +54,10 @@
             <div class="phone__body">
               <div class="phone__notch"></div>
               <div class="phone__screen">
-                <iframe id="heroFrame" title="Potion or Poison — live demo"
-                  src="https://yureck666.github.io/FindObjectsTest/"
-                  loading="eager"
+                <!-- src is assigned by main.js, first in the page's load queue -->
+                <iframe id="heroFrame" title="Idle Miner — live demo"
                   allow="accelerometer; gyroscope"></iframe>
+                <video id="heroPreview" src="assets/Playables Preview/Miner.mp4" muted loop playsinline preload="auto" style="display:none"></video>
               </div>
             </div>
           </div>
@@ -206,5 +214,7 @@
 
 <script src="assets/js/i18n.js"></script>
 <script src="assets/js/main.js"></script>
+<script data-goatcounter="https://yureck666.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
