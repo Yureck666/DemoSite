@@ -294,7 +294,14 @@ body {
 /* iframe and video are stacked (not just swapped) so activation can hand
    off between them with a brief overlap instead of a hard cut — the video
    stays on top for a beat after the iframe appears, masking the moment a
-   freshly-unhidden iframe needs to repaint. */
+   freshly-unhidden iframe needs to repaint.
+   Hidden/shown with opacity, not visibility: toggling visibility on a
+   cross-origin iframe makes the browser tear down and re-create its
+   compositor layer right at the toggle, and that fresh layer can land a
+   frame out of z-order — a flash that more overlap time can't fix, since
+   it's a one-frame compositing race, not a timing shortfall. will-change
+   keeps the layer alive permanently so there's nothing to recreate; opacity
+   then blends in strict z-order every frame like any other compositor op. */
 .phone__screen iframe {
   position: absolute;
   inset: 0;
@@ -302,6 +309,8 @@ body {
   height: 100%;
   border: 0;
   z-index: 1;
+  opacity: 1;
+  will-change: opacity;
 }
 .phone__screen video {
   position: absolute;
@@ -310,6 +319,7 @@ body {
   height: 100%;
   object-fit: cover;
   z-index: 2;
+  will-change: opacity;
 }
 /* Transparent hit-target over a playable's screen. Captures the click when
    the phone isn't the active one (so a tap selects it instead of reaching

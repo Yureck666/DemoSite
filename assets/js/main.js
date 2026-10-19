@@ -102,11 +102,12 @@
      covers both cases, swapping back (with a brief overlap so the
      iframe's repaint-after-hidden isn't visible as a black flash) once
      it's both loaded and on screen.
-     Hidden with visibility, not display: display:none collapses the
+     Hidden with opacity, not display: display:none collapses the
      iframe's layout box (and so the canvas inside it) to 0x0, and the
      WebGL playable's still-ticking render loop then spams
      "GL_INVALID_FRAMEBUFFER_OPERATION: zero size" trying to draw into
-     that. visibility:hidden keeps it sized — same cost, no error. */
+     that. opacity keeps it sized — same cost, no error — and (see CSS)
+     avoids visibility's own compositor-layer-recreation flash on top. */
   var heroPhone = $("heroPhone");
   var heroFrame = $("heroFrame");
   var heroPreview = $("heroPreview");
@@ -117,17 +118,27 @@
     function syncHero() {
       clearTimeout(heroRevealTimer);
       if (heroReady && !heroOffscreen) {
-        heroFrame.style.visibility = "";
+        // Freeze the mask on whatever frame it's already decoded *before*
+        // the iframe goes visible, instead of leaving it decoding new
+        // frames through the overlap: Unity's heavy WebGL/shader-compile
+        // work lands on the GPU right as the iframe is revealed, and a
+        // hardware video decoder starved by that contention can hand the
+        // compositor a black frame for an instant — on top or not, a black
+        // frame of the "mask" is still black. A paused frame has nothing
+        // left to decode, so there's nothing for the GPU to starve.
+        heroPreview.pause();
+        heroFrame.style.opacity = "1";
+        heroFrame.style.pointerEvents = "";
         // 450ms, not 150: the iframe's own load event fires once its HTML/JS
         // has downloaded, but Unity still needs a beat after that to actually
         // paint a real frame — too short an overlap here means a flash of
         // blank/black between "video gone" and "game actually drawing".
         heroRevealTimer = setTimeout(function () {
-          heroPreview.pause();
           heroPreview.style.display = "none";
         }, 450);
       } else {
-        heroFrame.style.visibility = "hidden";
+        heroFrame.style.opacity = "0";
+        heroFrame.style.pointerEvents = "none";
         heroPreview.style.display = "";
         heroPreview.play();
       }
@@ -699,16 +710,18 @@
     // clip); omitted when just scrolling offscreen, where resuming the
     // clip wherever it was reads fine and there's no "new game" to signal.
     //
-    // Hides the iframe with visibility, not display: display:none collapses
+    // Hides the iframe with opacity, not display: display:none collapses
     // its layout box (and so the canvas inside it) to 0x0, and a WebGL
     // playable whose render loop is still ticking away behind it then spams
     // "GL_INVALID_FRAMEBUFFER_OPERATION: zero size" trying to draw into
-    // that. visibility:hidden keeps the box (and canvas) its real size, so
-    // it still just draws into a frame nobody sees — no error, same cost.
+    // that. opacity keeps the box (and canvas) its real size, so it still
+    // just draws into a frame nobody sees — no error, same cost — and (see
+    // CSS) avoids visibility's compositor-layer-recreation flash on top.
     function showVideo(entry, restart) {
       clearTimeout(entry._revealTimer);
       entry._onReady = null; // don't let a late load() from before yank the video away now
-      entry.iframe.style.visibility = "hidden";
+      entry.iframe.style.opacity = "0";
+      entry.iframe.style.pointerEvents = "none";
       entry.video.style.display = "";
       if (restart) entry.video.currentTime = 0;
       entry.video.play();
@@ -724,11 +737,20 @@
     // too-short overlap just trades the flicker for a slightly later one.
     function showIframe(entry) {
       ensureLoaded(entry);
-      entry.iframe.style.visibility = "";
+      entry.iframe.style.opacity = "1";
+      entry.iframe.style.pointerEvents = "";
       clearTimeout(entry._revealTimer);
       onReady(entry, function () {
+        // Freeze the mask the moment it's known the iframe is about to take
+        // over, instead of leaving it decoding new frames through the
+        // overlap: Unity's heavy WebGL/shader-compile work lands on the GPU
+        // right as the iframe is revealed, and a hardware video decoder
+        // starved by that contention can hand the compositor a black frame
+        // for an instant — on top or not, a black "mask" frame is still
+        // black. A paused frame has nothing left to decode, so there's
+        // nothing for the GPU to starve.
+        entry.video.pause();
         entry._revealTimer = setTimeout(function () {
-          entry.video.pause();
           entry.video.style.display = "none";
         }, 450);
       });
@@ -813,7 +835,8 @@
       if (index === initial) {
         entry.video.style.display = "none";
       } else {
-        entry.iframe.style.visibility = "hidden";
+        entry.iframe.style.opacity = "0";
+        entry.iframe.style.pointerEvents = "none";
         entry.video.play();
         queue.push(entry);
       }
