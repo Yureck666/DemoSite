@@ -98,6 +98,7 @@ window.SITE_DATA = {
           url: "assets/playables/e1bed1/index.html",
           icon: "assets/Playables Icons/miner.jpg",
           preview: "assets/Playables Preview/Miner.mp4",
+          size: 4233836,
           featured: true,
           ctaPlay: "Играть"
         },
@@ -108,6 +109,7 @@ window.SITE_DATA = {
           url: "assets/playables/71a4cd/index.html",
           icon: "assets/Playables Icons/Legendale.png",
           preview: "assets/Playables Preview/Legendale.mp4",
+          size: 4888539,
           featured: false,
           ctaPlay: "Играть"
         },
@@ -118,6 +120,7 @@ window.SITE_DATA = {
           url: "assets/playables/2b9578/index.html",
           icon: "assets/Playables Icons/Potion.png",
           preview: "assets/Playables Preview/Potion.mp4",
+          size: 2906908,
           featured: false,
           ctaPlay: "Играть"
         },
@@ -128,6 +131,7 @@ window.SITE_DATA = {
           url: "assets/playables/225b08/index.html",
           icon: "assets/Playables Icons/ColorAnts.webp",
           preview: "assets/Playables Preview/ColorAnts.mp4",
+          size: 2417396,
           featured: false,
           ctaPlay: "Играть"
         },
@@ -138,6 +142,7 @@ window.SITE_DATA = {
           url: "assets/playables/1fbf47/index.html",
           icon: "assets/Playables Icons/Hexa_Icon_800x800-1.jpg",
           preview: "assets/Playables Preview/Hex.mp4",
+          size: 1144922,
           featured: false,
           ctaPlay: "Играть"
         }
@@ -300,6 +305,7 @@ window.SITE_DATA = {
           url: "assets/playables/e1bed1/index.html",
           icon: "assets/Playables Icons/miner.jpg",
           preview: "assets/Playables Preview/Miner.mp4",
+          size: 4233836,
           featured: true,
           ctaPlay: "Play"
         },
@@ -310,6 +316,7 @@ window.SITE_DATA = {
           url: "assets/playables/71a4cd/index.html",
           icon: "assets/Playables Icons/Legendale.png",
           preview: "assets/Playables Preview/Legendale.mp4",
+          size: 4888539,
           featured: false,
           ctaPlay: "Play"
         },
@@ -320,6 +327,7 @@ window.SITE_DATA = {
           url: "assets/playables/2b9578/index.html",
           icon: "assets/Playables Icons/Potion.png",
           preview: "assets/Playables Preview/Potion.mp4",
+          size: 2906908,
           featured: false,
           ctaPlay: "Play"
         },
@@ -330,6 +338,7 @@ window.SITE_DATA = {
           url: "assets/playables/225b08/index.html",
           icon: "assets/Playables Icons/ColorAnts.webp",
           preview: "assets/Playables Preview/ColorAnts.mp4",
+          size: 2417396,
           featured: false,
           ctaPlay: "Play"
         },
@@ -340,6 +349,7 @@ window.SITE_DATA = {
           url: "assets/playables/1fbf47/index.html",
           icon: "assets/Playables Icons/Hexa_Icon_800x800-1.jpg",
           preview: "assets/Playables Preview/Hex.mp4",
+          size: 1144922,
           featured: false,
           ctaPlay: "Play"
         }

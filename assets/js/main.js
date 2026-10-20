@@ -111,6 +111,7 @@
   var playerOpenNewTab = $("playerOpenNewTab");
   var currentPlayableUrl = "";
   var currentPlayablePreview = "";
+  var currentPlayableSize = 0;
   var playerLoadAbort = null;
 
   var playerPhone = modal.querySelector(".phone--lg");
@@ -125,11 +126,16 @@
   playerLoadingFill.style.strokeDasharray = String(loadingRingCircumference);
 
   function setLoadingProgress(loaded, total) {
-    var pct = total ? Math.min(1, loaded / total) : 0;
+    // Clamped defensively: loaded counts actual decoded bytes out of the
+    // reader, which can land a byte or two past a known total right at
+    // the last chunk — never past it by much, but "N/All" reading over
+    // 100% at all looks broken, so cap the display at the total.
+    var shown = total ? Math.min(loaded, total) : loaded;
+    var pct = total ? shown / total : 0;
     playerLoadingFill.style.strokeDashoffset = String(loadingRingCircumference * (1 - pct));
     var toMb = function (bytes) { return (bytes / (1024 * 1024)).toFixed(1); };
     var unit = state.lang === "ru" ? "МБ" : "MB";
-    playerLoadingLabel.textContent = toMb(loaded) + " / " + (total ? toMb(total) : "—") + " " + unit;
+    playerLoadingLabel.textContent = toMb(shown) + " / " + (total ? toMb(total) : "—") + " " + unit;
   }
   setLoadingProgress(0, 0);
 
@@ -146,22 +152,26 @@
   }
 
   // Streams the playable's own (self-contained, 1-5MB) HTML file through
-  // fetch() so the ring and the N/All label are driven by real bytes
-  // downloaded against the response's Content-Length, not a guess. Handing
-  // the fully-downloaded text to the iframe via srcdoc (once done) avoids a
-  // second iframe.src navigation that would have to re-fetch the whole
-  // thing — or silently hope the HTTP cache has it — to actually show
-  // anything.
-  function loadIntoPlayer(url) {
+  // fetch() so the ring and the N/All label are driven by real bytes read
+  // off the reader. The total comes from knownSize (the file's actual
+  // on-disk byte count, passed down from SITE_DATA — see i18n.js "size"),
+  // not the response's Content-Length: when a host gzips the HTML in
+  // transit, Content-Length reports the compressed wire size while the
+  // reader still hands back the larger decompressed bytes, so "received"
+  // would sail past it. Handing the fully-downloaded text to the iframe
+  // via srcdoc (once done) avoids a second iframe.src navigation that
+  // would have to re-fetch the whole thing — or silently hope the HTTP
+  // cache has it — to actually show anything.
+  function loadIntoPlayer(url, knownSize) {
     if (playerLoadAbort) playerLoadAbort.abort();
     var controller = new AbortController();
     playerLoadAbort = controller;
     playerPhone.classList.add("is-loading");
-    setLoadingProgress(0, 0);
+    var total = knownSize || 0;
+    setLoadingProgress(0, total);
 
     fetch(url, { signal: controller.signal }).then(function (res) {
-      var total = parseInt(res.headers.get("Content-Length"), 10) || 0;
-      if (!res.body || !total) { playerFrame.src = url; return; }
+      if (!res.body) { playerFrame.src = url; return; }
       var reader = res.body.getReader();
       var received = 0;
       var chunks = [];
@@ -193,9 +203,10 @@
     playerBackdrop.removeAttribute("src");
   }
 
-  function openPlayable(url, title, genre, previewSrc) {
+  function openPlayable(url, title, genre, previewSrc, size) {
     currentPlayableUrl = url;
     currentPlayablePreview = previewSrc || "";
+    currentPlayableSize = size || 0;
     playerTitle.textContent = title;
     playerGenre.textContent = genre || "";
     playerOpenNewTab.href = url;
@@ -205,7 +216,7 @@
       modal.setAttribute("open", "");
     }
     primeBackdrop(currentPlayablePreview);
-    loadIntoPlayer(url);
+    loadIntoPlayer(url, currentPlayableSize);
   }
   function closePlayable() {
     modal.close ? modal.close() : modal.removeAttribute("open");
@@ -214,7 +225,7 @@
   $("playerRestart").addEventListener("click", function () {
     if (currentPlayableUrl) {
       primeBackdrop(currentPlayablePreview);
-      loadIntoPlayer(currentPlayableUrl);
+      loadIntoPlayer(currentPlayableUrl, currentPlayableSize);
     }
   });
   $("playerClose").addEventListener("click", closePlayable);
@@ -755,7 +766,7 @@
         activeIndex = index;
         centerCard(entry.card, opts.instant);
       } else {
-        openPlayable(entry.url, entry.title, entry.genre, entry.preview);
+        openPlayable(entry.url, entry.title, entry.genre, entry.preview, entry.size);
       }
     }
 
@@ -874,7 +885,7 @@
       playablesTrack.appendChild(card);
       return {
         card: card, phone: phone, video: phone._video, selectBtn: phone._selectBtn,
-        url: p.url, title: p.title, genre: p.genre, preview: p.preview, featured: !!p.featured
+        url: p.url, title: p.title, genre: p.genre, preview: p.preview, size: p.size, featured: !!p.featured
       };
     });
 
@@ -903,7 +914,7 @@
       heroPlayBtn.setAttribute("aria-label", featured.ctaPlay + " " + featured.title);
       if (heroPlayBtn._clickHandler) heroPlayBtn.removeEventListener("click", heroPlayBtn._clickHandler);
       heroPlayBtn._clickHandler = function () {
-        openPlayable(featured.url, featured.title, featured.genre, featured.preview);
+        openPlayable(featured.url, featured.title, featured.genre, featured.preview, featured.size);
       };
       heroPlayBtn.addEventListener("click", heroPlayBtn._clickHandler);
     }
