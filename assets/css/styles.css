@@ -516,7 +516,10 @@ body {
 .gamefeel__coin-icon { position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--coin); }
 .gamefeel__value { min-width: 2ch; font-variant-numeric: tabular-nums; }
 
-.gamefeel__fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+/* Own compositing layer so iOS Safari actually flushes canvas repaints each frame — without it, the
+   canvas sits among actively-animating siblings (button squash, counter pulse) and iOS can leave it
+   stuck on a stale/blank frame while those CSS animations keep playing normally. */
+.gamefeel__fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; transform: translateZ(0); will-change: transform; }
 
 .gamefeel__btn {
   position: absolute;
@@ -679,29 +682,33 @@ html[lang="en"] .gamefeel__btn { background-image: url("../button_en.png"); }
 }
 .playables-caption--nav { margin: var(--sp-1) 0 var(--sp-2); }
 
-/* Playables podium — a horizontally scrollable strip, moved only by code
-   (clicking a phone), never by the user dragging it — so the scrollbar is
-   hidden rather than shown as a dead/confusing control. */
+/* Playables podium — paged entirely by code (clicking a phone), never by
+   the user dragging or swiping it. Earlier attempts tried to block just
+   the horizontal axis on a native scroll container (touch-action, then a
+   touchmove guard) and both fought an active phone's iframe unreliably —
+   touch-action doesn't reach across a frame boundary, and a JS guard can
+   only preventDefault what it's already too late to stop. Simplest fix:
+   don't make this a touch-scrollable container at all. .playables-grid is
+   just a clipping viewport (overflow hidden, fixed in place); the actual
+   row of cards is .playables-track below, repositioned solely by setting
+   its own transform from JS (see setupPlayablesCarousel). Nothing here
+   responds to a touch or click other than the explicit per-phone handlers
+   — a swipe landing anywhere in this area, iframe included, behaves
+   exactly like it would outside it. */
 .playables-grid {
+  overflow: hidden;
+  padding: 0 var(--sp-2) var(--sp-1);
+}
+.playables-track {
   display: flex;
   align-items: flex-end;
   gap: var(--sp-4);
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
-  padding: 0 var(--sp-2) var(--sp-1);
-  scrollbar-width: none;
-  /* Scrolling here is code-driven only (see comment above) — touch-action
-     blocks the finger-swipe gesture but leaves JS's scrollLeft/scrollTo
-     untouched, and pan-y (not none) keeps vertical page scroll working
-     when the gesture starts on top of this row. */
-  touch-action: pan-y;
   /* Explicit floor so the row never has to measure its own content to size
      itself: active phone at 312px (aspect-ratio 9/16 → ~555px) + caption
      (~16px gap + two lines of text) + a little slack. */
   min-height: 648px;
 }
-.playables-grid::-webkit-scrollbar { display: none; }
-.playable-card { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; scroll-snap-align: center; }
+.playable-card { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
 /* Accent border marks the active (centered) phone, not a fixed "featured"
    one — it moves with selection, so it needs its own class, not --featured. */
 .phone.is-active .phone__body { border-color: var(--accent); }
@@ -710,7 +717,7 @@ html[lang="en"] .gamefeel__btn { background-image: url("../button_en.png"); }
 .playable-card__title { font-family: var(--font-text); font-weight: 500; font-size: 16px; }
 .playable-card__genre { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--muted); margin-top: 2px; }
 @media (max-width: 720px) {
-  .playables-grid { gap: var(--sp-3); }
+  .playables-track { gap: var(--sp-3); }
 }
 
 /* Playables nav — rounded icon buttons below the scroll, one per phone,

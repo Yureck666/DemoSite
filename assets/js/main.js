@@ -179,7 +179,7 @@
      to itself; afterHeroLoads() lets the playables carousel (built later,
      in renderProjects) queue its own loading behind it instead of all four
      carousel iframes competing with the hero's load right out of the gate. */
-  var HERO_URL = "assets/playables/idleminerdemo/index.html";
+  var HERO_URL = "assets/playables/e1bed1/index.html";
   var heroLoaded = false;
   var heroLoadWaiters = [];
   function afterHeroLoads(fn) {
@@ -764,37 +764,39 @@
      always 260px wide — active/inactive is purely a transform: scale() in CSS,
      never a width change, so the row's height is rock solid and the
      iframe's content never has to notice a resize. Clicking one hands it
-     the red "active" border, scales it up, and scrolls it to center; the
-     phone that loses active status scales back down and reloads, so it's
-     back to a clean start next time it's picked. Side padding equal to
-     half the viewport (minus half a phone's width) is added so there's
-     always room to scroll any phone to center, even when all of them
-     already fit on screen without scrolling. */
-  var PHONE_WIDTH = 260; // must match .phone width in styles.css
+     the red "active" border, scales it up, and centers it.
 
-  function setupPlayablesCarousel(grid, entries, navButtons) {
+     The row is paged entirely by code, never by the user dragging or
+     swiping it — including over an active phone's iframe, which (being its
+     own document) earlier attempts at blocking just that one axis with
+     touch-action or a touchmove guard couldn't reach reliably. So rather
+     than fighting a native scroll container's touch handling, there isn't
+     one: .playables-grid (see CSS) is a plain overflow:hidden viewport, and
+     .playables-track — the actual flex row of cards — is moved by setting
+     its own `transform: translateX()`, which touch/click never drives on
+     its own. A swipe or tap landing anywhere in this area, iframe included,
+     is therefore just a normal page-scroll/tap everywhere outside it would
+     be: nothing here intercepts it. */
+  function setupPlayablesCarousel(grid, track, entries, navButtons) {
     var activeIndex = -1;
-
-    function layout() {
-      var pad = Math.max(0, grid.clientWidth / 2 - PHONE_WIDTH / 2) + "px";
-      grid.style.paddingLeft = pad;
-      grid.style.paddingRight = pad;
-    }
+    var trackX = 0;
 
     function centerCard(card, instant) {
       var gridRect = grid.getBoundingClientRect();
       var cardRect = card.getBoundingClientRect();
       // getBoundingClientRect() reports post-zoom (visual) pixels, but
-      // scrollLeft/scrollTo operate in pre-zoom (layout) pixels — under the
-      // site's `zoom: 0.8` (see styles.css) those units disagree, so a delta
-      // measured in rect-space has to be rescaled before it's handed to
-      // scrollTo, or every jump lands short (converging only on repeat
-      // clicks to the same card, since each call corrects part of the gap
-      // its predecessor left behind). clientWidth/gridRect.width is 1 when
-      // there's no zoom, so this is a no-op outside this page's setup.
+      // transform: translateX operates in pre-zoom (layout) pixels — under
+      // the site's `zoom: 0.8` (see styles.css) those units disagree, so a
+      // delta measured in rect-space has to be rescaled before it's added
+      // to the track's offset, or every jump lands short (converging only
+      // on repeat clicks to the same card, since each call corrects part of
+      // the gap its predecessor left behind). clientWidth/gridRect.width is
+      // 1 when there's no zoom, so this is a no-op outside this page's setup.
       var zoomRatio = grid.clientWidth / gridRect.width;
       var delta = ((cardRect.left + cardRect.width / 2) - (gridRect.left + gridRect.width / 2)) * zoomRatio;
-      grid.scrollTo({ left: grid.scrollLeft + delta, behavior: (instant || prefersReducedMotion) ? "auto" : "smooth" });
+      trackX -= delta;
+      track.style.transition = (instant || prefersReducedMotion) ? "none" : "transform 420ms ease";
+      track.style.transform = "translateX(" + trackX + "px)";
     }
 
     // Points the iframe at url and tracks readiness; fires the pending
@@ -812,18 +814,6 @@
         // noise yet. showIframe's reveal callback below is the only place
         // that resumes one.
         pausePlayable(entry.iframe);
-        // .playables-grid's touch-action: pan-y (see CSS) only governs touch
-        // starting on the OUTER document — once a phone is active, taps land
-        // directly on its iframe (pointer-events re-enabled above in
-        // showIframe), and touch-action doesn't cross a frame boundary: the
-        // swipe is decided by the IFRAME's own document, which defaults to
-        // "auto" and happily hands it to the grid as a horizontal scroll.
-        // Same-origin (see wireDragThrough above), so mirror the restriction
-        // straight onto the loaded document instead.
-        try {
-          var doc = entry.iframe.contentDocument;
-          if (doc && doc.documentElement) doc.documentElement.style.touchAction = "pan-y";
-        } catch (e) { /* not reachable: outer grid's touch-action is the fallback */ }
         var cb = entry._onReady;
         entry._onReady = null;
         if (cb) cb();
@@ -993,7 +983,6 @@
     grid._carouselResize = function () {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(function () {
-        layout();
         if (activeIndex !== -1) centerCard(entries[activeIndex].card, true);
       }, 150);
     };
@@ -1026,7 +1015,6 @@
       loadEntry(next, loadNextQueued);
     }
     loadNextQueued();
-    layout();
     selectPlayable(initial, { instant: true });
   }
 
@@ -1083,6 +1071,8 @@
 
     var playablesGrid = $("playablesGrid");
     clear(playablesGrid);
+    var playablesTrack = el("div", { className: "playables-track" });
+    playablesGrid.appendChild(playablesTrack);
     var ordered = d.projects.playables;
     var playableEntries = ordered.map(function (p) {
       var phone = buildPlayablePhone(p);
@@ -1093,7 +1083,7 @@
           el("div", { className: "playable-card__genre", text: p.genre })
         ])
       ]);
-      playablesGrid.appendChild(card);
+      playablesTrack.appendChild(card);
       return { card: card, phone: phone, iframe: phone._iframe, video: phone._video, selectBtn: phone._selectBtn, url: p.url, featured: !!p.featured };
     });
 
@@ -1111,7 +1101,7 @@
       return btn;
     });
 
-    setupPlayablesCarousel(playablesGrid, playableEntries, navButtons);
+    setupPlayablesCarousel(playablesGrid, playablesTrack, playableEntries, navButtons);
 
     var gamesRow = $("gamesRow");
     clear(gamesRow);
