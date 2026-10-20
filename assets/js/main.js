@@ -36,6 +36,65 @@
   function $(id) { return document.getElementById(id); }
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 
+  /* ---------- drag/press survives crossing an iframe's edge ----------
+     A press that starts inside a playable (e.g. holding a joystick) looks
+     "stuck" the moment the cursor overshoots the phone's edge: the browser
+     only ever delivers mousemove/mouseup to whichever document is actually
+     under the cursor, so the iframe stops hearing anything the instant it's
+     no longer that document — same-origin or not. These playables are
+     same-origin (plain iframe.src, no sandbox), so the fix doesn't need
+     postMessage: once a real mousedown is seen inside the frame, the page
+     just keeps replaying move/up on the frame's own document directly,
+     using whatever document.elementFromPoint finds there, until the button
+     is actually released. */
+  function wireDragThrough(iframe) {
+    var down = false;
+    var lastTarget = null;
+
+    function onFrameDown(e) { down = true; lastTarget = e.target; }
+    function onFrameUp() { down = false; lastTarget = null; }
+
+    // contentDocument swaps to a brand new document on every navigation
+    // (including the reloads this site does when a phone goes inactive),
+    // so the listeners have to be reattached each time it loads.
+    iframe.addEventListener("load", function () {
+      var win = iframe.contentWindow;
+      if (!win) return;
+      win.addEventListener("mousedown", onFrameDown, true);
+      win.addEventListener("mouseup", onFrameUp, true);
+    });
+
+    function fire(type, x, y, buttons) {
+      var doc;
+      try { doc = iframe.contentDocument; } catch (e) { return; }
+      if (!doc) return;
+      var target = (lastTarget && lastTarget.isConnected && lastTarget.ownerDocument === doc)
+        ? lastTarget
+        : doc.elementFromPoint(x, y);
+      if (!target) return;
+      var opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, screenX: x, screenY: y, button: 0, buttons: buttons };
+      target.dispatchEvent(new MouseEvent("mouse" + type, opts));
+      try {
+        opts.pointerId = 1; opts.pointerType = "mouse"; opts.isPrimary = true;
+        target.dispatchEvent(new PointerEvent("pointer" + type, opts));
+      } catch (err) { /* older browsers: the mouse event above is enough */ }
+    }
+
+    document.addEventListener("mousemove", function (e) {
+      if (!down) return;
+      if (e.buttons === 0) { onFrameUp(); return; } // button let go outside the page entirely
+      var r = iframe.getBoundingClientRect();
+      fire("move", e.clientX - r.left, e.clientY - r.top, 1);
+    });
+    document.addEventListener("mouseup", function (e) {
+      if (!down) return;
+      var r = iframe.getBoundingClientRect();
+      onFrameUp();
+      fire("up", e.clientX - r.left, e.clientY - r.top, 0);
+    });
+    window.addEventListener("blur", onFrameUp);
+  }
+
   /* ---------- playable modal (reused by hero + project cards) ---------- */
   var modal = $("playerModal");
   var playerFrame = $("playerFrame");
@@ -48,6 +107,7 @@
   playerFrame.addEventListener("load", function () {
     playerPhone.classList.remove("is-loading");
   });
+  wireDragThrough(playerFrame);
 
   function openPlayable(url, title, genre) {
     currentPlayableUrl = url;
@@ -150,6 +210,7 @@
   var heroFrame = $("heroFrame");
   var heroPreview = $("heroPreview");
   if (heroPhone && heroFrame && heroPreview) {
+    wireDragThrough(heroFrame);
     var heroReady = false;
     var heroOffscreen = false;
     var heroRevealTimer = null;
@@ -676,6 +737,7 @@
     // phones that aren't shown first don't all fight for bandwidth/CPU
     // at once on page load.
     var iframe = el("iframe", { title: p.title, allow: "accelerometer; gyroscope" });
+    wireDragThrough(iframe);
     // Cheap stand-in for the inactive state: a muted looping clip instead
     // of a live (but hidden) iframe, so sitting inactive costs ~nothing.
     var video = el("video", { muted: true, loop: true, playsInline: true, preload: "auto" });
