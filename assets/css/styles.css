@@ -533,6 +533,10 @@ body {
   background: url("../button_ru.png") center / 100% 100% no-repeat;
   transition: transform 80ms ease, filter 150ms ease;
   user-select: none;
+  /* iOS Safari paints its own translucent highlight over tapped elements. This button
+     covers nearly the whole stage, so that overlay sat on top of the fx canvas and
+     masked the burst/coin-flight animation underneath it for the highlight's duration. */
+  -webkit-tap-highlight-color: transparent;
 }
 /* Keyboard focus ring hugs the pill instead of ballooning outward from this oversized button. */
 .gamefeel__btn:focus-visible { outline-offset: -8px; }
