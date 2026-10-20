@@ -62,18 +62,17 @@
       </div>
       <div>
         <div class="hero__device-wrap">
-          <div class="phone phone--hero is-loading" id="heroPhone">
+          <div class="phone phone--hero" id="heroPhone">
             <div class="phone__edge"></div>
             <div class="phone__body">
-              <div class="phone__notch"></div>
               <div class="phone__screen">
-                <!-- src is assigned by main.js, first in the page's load queue -->
-                <iframe id="heroFrame" title="Idle Miner — live demo"
-                  allow="accelerometer; gyroscope"></iframe>
-                <video id="heroPreview" src="assets/Playables Preview/Miner.mp4" muted loop playsinline preload="auto" style="display:none"></video>
-                <div class="phone__loader" aria-hidden="true"></div>
+                <video id="heroPreview" src="assets/Playables Preview/Miner.mp4" muted loop playsinline preload="auto" autoplay></video>
+                <!-- aria-label and click target are wired by main.js once the playables data (title/url) is loaded -->
+                <button type="button" class="phone__select" id="heroPlayBtn"></button>
               </div>
             </div>
+            <div class="phone__notch"></div>
+            <div class="phone__frame"></div>
           </div>
         </div>
       </div>
@@ -217,12 +216,20 @@
     <div class="phone phone--lg">
       <div class="phone__edge"></div>
       <div class="phone__body">
-        <div class="phone__notch"></div>
         <div class="phone__screen">
           <iframe id="playerFrame" title="Playable demo" src="about:blank" allow="accelerometer; gyroscope"></iframe>
-          <div class="phone__loader" aria-hidden="true"></div>
+          <video id="playerBackdrop" muted playsinline aria-hidden="true"></video>
+          <div class="player-loading" id="playerLoading" aria-hidden="true">
+            <svg class="player-loading__ring" viewBox="0 0 64 64" width="64" height="64">
+              <circle class="player-loading__track" cx="32" cy="32" r="28"></circle>
+              <circle class="player-loading__fill" id="playerLoadingFill" cx="32" cy="32" r="28"></circle>
+            </svg>
+            <div class="player-loading__label" id="playerLoadingLabel">0 / 0</div>
+          </div>
         </div>
       </div>
+      <div class="phone__notch"></div>
+      <div class="phone__frame"></div>
     </div>
   </div>
 </dialog>

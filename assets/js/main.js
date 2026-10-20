@@ -95,13 +95,23 @@
     window.addEventListener("blur", onFrameUp);
   }
 
-  /* ---------- playable modal (reused by hero + project cards) ---------- */
+  /* ---------- playable modal (reused by hero + playables carousel) ----------
+     Every playable now opens here and only here — the small phones in the
+     hero and the carousel are just a muted preview loop with a "tap to
+     play" badge (see buildPlayablePhone / the hero wiring in
+     renderProjects); nothing ever runs inline, so there's only ever one
+     live playable iframe on the page at a time. */
   var modal = $("playerModal");
   var playerFrame = $("playerFrame");
+  var playerBackdrop = $("playerBackdrop");
+  var playerLoadingFill = $("playerLoadingFill");
+  var playerLoadingLabel = $("playerLoadingLabel");
   var playerTitle = $("playerModalTitle");
   var playerGenre = $("playerModalGenre");
   var playerOpenNewTab = $("playerOpenNewTab");
   var currentPlayableUrl = "";
+  var currentPlayablePreview = "";
+  var playerLoadAbort = null;
 
   var playerPhone = modal.querySelector(".phone--lg");
   playerFrame.addEventListener("load", function () {
@@ -109,27 +119,102 @@
   });
   wireDragThrough(playerFrame);
 
-  function openPlayable(url, title, genre) {
+  // Circumference read from the ring's own radius so it never has to be
+  // kept in sync by hand with the SVG markup.
+  var loadingRingCircumference = 2 * Math.PI * parseFloat(playerLoadingFill.getAttribute("r"));
+  playerLoadingFill.style.strokeDasharray = String(loadingRingCircumference);
+
+  function setLoadingProgress(loaded, total) {
+    var pct = total ? Math.min(1, loaded / total) : 0;
+    playerLoadingFill.style.strokeDashoffset = String(loadingRingCircumference * (1 - pct));
+    var toMb = function (bytes) { return (bytes / (1024 * 1024)).toFixed(1); };
+    var unit = state.lang === "ru" ? "МБ" : "MB";
+    playerLoadingLabel.textContent = toMb(loaded) + " / " + (total ? toMb(total) : "—") + " " + unit;
+  }
+  setLoadingProgress(0, 0);
+
+  // Freezes the modal's blurred backdrop on the playable's own preview
+  // clip (see CSS .phone.is-loading #playerBackdrop) so there's a real
+  // frame to blur behind the progress ring instead of plain black.
+  function primeBackdrop(previewSrc) {
+    playerBackdrop.pause();
+    if (!previewSrc) { playerBackdrop.removeAttribute("src"); return; }
+    playerBackdrop.src = previewSrc;
+    playerBackdrop.currentTime = 0;
+    var p = playerBackdrop.play();
+    if (p && p.then) p.then(function () { playerBackdrop.pause(); }).catch(function () {});
+  }
+
+  // Streams the playable's own (self-contained, 1-5MB) HTML file through
+  // fetch() so the ring and the N/All label are driven by real bytes
+  // downloaded against the response's Content-Length, not a guess. Handing
+  // the fully-downloaded text to the iframe via srcdoc (once done) avoids a
+  // second iframe.src navigation that would have to re-fetch the whole
+  // thing — or silently hope the HTTP cache has it — to actually show
+  // anything.
+  function loadIntoPlayer(url) {
+    if (playerLoadAbort) playerLoadAbort.abort();
+    var controller = new AbortController();
+    playerLoadAbort = controller;
+    playerPhone.classList.add("is-loading");
+    setLoadingProgress(0, 0);
+
+    fetch(url, { signal: controller.signal }).then(function (res) {
+      var total = parseInt(res.headers.get("Content-Length"), 10) || 0;
+      if (!res.body || !total) { playerFrame.src = url; return; }
+      var reader = res.body.getReader();
+      var received = 0;
+      var chunks = [];
+      function pump() {
+        return reader.read().then(function (result) {
+          if (result.done) {
+            return new Blob(chunks).text().then(function (html) {
+              if (!controller.signal.aborted) playerFrame.srcdoc = html;
+            });
+          }
+          chunks.push(result.value);
+          received += result.value.length;
+          setLoadingProgress(received, total);
+          return pump();
+        });
+      }
+      return pump();
+    }).catch(function (err) {
+      if (err && err.name !== "AbortError" && !controller.signal.aborted) playerFrame.src = url;
+    });
+  }
+
+  function resetPlayer() {
+    if (playerLoadAbort) playerLoadAbort.abort();
+    playerFrame.src = "about:blank";
+    playerFrame.removeAttribute("srcdoc");
+    playerPhone.classList.remove("is-loading");
+    playerBackdrop.pause();
+    playerBackdrop.removeAttribute("src");
+  }
+
+  function openPlayable(url, title, genre, previewSrc) {
     currentPlayableUrl = url;
+    currentPlayablePreview = previewSrc || "";
     playerTitle.textContent = title;
     playerGenre.textContent = genre || "";
-    playerPhone.classList.add("is-loading");
-    playerFrame.src = url;
     playerOpenNewTab.href = url;
     if (typeof modal.showModal === "function") {
       modal.showModal();
     } else {
       modal.setAttribute("open", "");
     }
+    primeBackdrop(currentPlayablePreview);
+    loadIntoPlayer(url);
   }
   function closePlayable() {
     modal.close ? modal.close() : modal.removeAttribute("open");
-    playerFrame.src = "about:blank";
+    resetPlayer();
   }
   $("playerRestart").addEventListener("click", function () {
     if (currentPlayableUrl) {
-      playerPhone.classList.add("is-loading");
-      playerFrame.src = currentPlayableUrl;
+      primeBackdrop(currentPlayablePreview);
+      loadIntoPlayer(currentPlayableUrl);
     }
   });
   $("playerClose").addEventListener("click", closePlayable);
@@ -138,149 +223,18 @@
     var inside = e.clientX >= box.left && e.clientX <= box.right && e.clientY >= box.top && e.clientY <= box.bottom;
     if (!inside) closePlayable();
   });
-  modal.addEventListener("cancel", function () {
-    playerFrame.src = "about:blank";
-  });
+  modal.addEventListener("cancel", resetPlayer);
 
-  /* ---------- playable SDK lifecycle control ----------
-     These playable builds start themselves the moment their own scripts
-     finish loading — there's no "stay idle" flag, so an iframe that's
-     merely hidden behind opacity/a preview video keeps actually
-     simulating (and playing audio) the whole time. The SDK they're built
-     with listens for these window-level events as its own pause/resume
-     API; "unsafe" additionally mutes/unmutes and queues internally if
-     sent before the playable has finished initializing, so it's safe to
-     call right after onload fires, win or lose the race with startup. */
-  function pausePlayable(iframe) {
-    try { iframe.contentWindow.dispatchEvent(new Event("luna:unsafe:pause")); } catch (e) {}
-  }
-  function resumePlayable(iframe) {
-    try { iframe.contentWindow.dispatchEvent(new Event("luna:unsafe:resume")); } catch (e) {}
-  }
-
-  /* ---------- defer heavy work off the page's own first paint ----------
-     Unity WebGL startup (wasm instantiation, shader compile, GL context)
-     is a genuinely heavy one-off hit on the main thread — kicking it off
-     the instant a script runs competes with the page's own first paint
-     and makes the whole page feel like it's lagging, not just the frame.
-     Waiting for window.load, then an idle moment, means the page is done
-     and quiet before any playable's startup cost lands. */
-  function whenIdle(fn) {
-    var run = function () {
-      if ("requestIdleCallback" in window) requestIdleCallback(fn, { timeout: 2000 });
-      else setTimeout(fn, 200);
-    };
-    if (document.readyState === "complete") run();
-    else window.addEventListener("load", run);
-  }
-
-  /* ---------- page load order: hero goes first, everyone else waits ----------
-     The hero is the first thing a visitor sees, so it gets the network/CPU
-     to itself; afterHeroLoads() lets the playables carousel (built later,
-     in renderProjects) queue its own loading behind it instead of all four
-     carousel iframes competing with the hero's load right out of the gate. */
-  var HERO_URL = "assets/playables/e1bed1/index.html";
-  var heroLoaded = false;
-  var heroLoadWaiters = [];
-  function afterHeroLoads(fn) {
-    if (heroLoaded) fn();
-    else heroLoadWaiters.push(fn);
-  }
-  function unblockAfterHero() {
-    if (heroLoaded) return;
-    heroLoaded = true;
-    heroLoadWaiters.forEach(function (fn) { fn(); });
-    heroLoadWaiters = [];
-  }
-
-  /* ---------- hero phone: preview loop while loading / off-screen ----------
-     Same idea as the playables carousel below: a live iframe that isn't
-     actually ready yet, or is sitting outside the viewport, is either
-     showing nothing useful or wasting cost — so the muted preview loop
-     covers both cases, swapping back (with a brief overlap so the
-     iframe's repaint-after-hidden isn't visible as a black flash) once
-     it's both loaded and on screen.
-     Hidden with opacity, not display: display:none collapses the
-     iframe's layout box (and so the canvas inside it) to 0x0, and the
-     WebGL playable's still-ticking render loop then spams
-     "GL_INVALID_FRAMEBUFFER_OPERATION: zero size" trying to draw into
-     that. opacity keeps it sized — same cost, no error — and (see CSS)
-     avoids visibility's own compositor-layer-recreation flash on top. */
-  var heroPhone = $("heroPhone");
-  var heroFrame = $("heroFrame");
+  /* ---------- hero phone: muted preview loop, tap opens the modal ----------
+     No inline iframe here anymore — the hero is just the featured
+     playable's preview clip plus a "tap to play" badge; the real game
+     only ever loads once it's opened in the modal above. The click
+     target's aria-label and handler are wired in renderProjects, once the
+     featured playable's title/url are known. */
   var heroPreview = $("heroPreview");
-  if (heroPhone && heroFrame && heroPreview) {
-    wireDragThrough(heroFrame);
-    var heroReady = false;
-    var heroOffscreen = false;
-    var heroRevealTimer = null;
-    function syncHero() {
-      clearTimeout(heroRevealTimer);
-      if (heroReady && !heroOffscreen) {
-        // Freeze the mask on whatever frame it's already decoded *before*
-        // the iframe goes visible, instead of leaving it decoding new
-        // frames through the overlap: Unity's heavy WebGL/shader-compile
-        // work lands on the GPU right as the iframe is revealed, and a
-        // hardware video decoder starved by that contention can hand the
-        // compositor a black frame for an instant — on top or not, a black
-        // frame of the "mask" is still black. A paused frame has nothing
-        // left to decode, so there's nothing for the GPU to starve.
-        heroPreview.pause();
-        heroFrame.style.opacity = "1";
-        heroFrame.style.pointerEvents = "";
-        resumePlayable(heroFrame);
-        // 450ms, not 150: the iframe's own load event fires once its HTML/JS
-        // has downloaded, but Unity still needs a beat after that to actually
-        // paint a real frame — too short an overlap here means a flash of
-        // blank/black between "video gone" and "game actually drawing".
-        heroRevealTimer = setTimeout(function () {
-          heroPreview.style.display = "none";
-        }, 450);
-      } else {
-        heroFrame.style.opacity = "0";
-        heroFrame.style.pointerEvents = "none";
-        heroPreview.style.display = "";
-        heroPreview.play();
-        // Covers the loading window too, not just "ready but offscreen":
-        // without this the game auto-starts (audio and all) the moment its
-        // own scripts finish, well before the reveal above ever runs.
-        pausePlayable(heroFrame);
-      }
-    }
-    syncHero(); // starts on the preview loop until the real frame loads
-    heroFrame.addEventListener("load", function () {
-      // Also fires for the "about:blank" unload below — ignore that one,
-      // it's not the real game becoming ready.
-      if (heroFrame.src === "about:blank") return;
-      heroReady = true;
-      heroPhone.classList.remove("is-loading");
-      syncHero();
-      unblockAfterHero();
-    });
-    new IntersectionObserver(function (obsEntries) {
-      obsEntries.forEach(function (e) {
-        var wasOffscreen = heroOffscreen;
-        heroOffscreen = !e.isIntersecting;
-        if (heroOffscreen && !wasOffscreen) {
-          // Hiding it with opacity (see above) only stops the picture —
-          // the game keeps running behind it, audio and all. Actually
-          // unload it so sitting offscreen is silent too; reloaded fresh
-          // on return below.
-          heroReady = false;
-          heroFrame.src = "about:blank";
-        } else if (!heroOffscreen && wasOffscreen) {
-          heroPhone.classList.add("is-loading");
-          heroFrame.src = HERO_URL;
-        }
-        syncHero();
-      });
-    }).observe(heroPhone);
-    whenIdle(function () { heroFrame.src = HERO_URL; }); // first in the queue, but only once the page itself is settled
-    // Safety net: if the hero's load never fires (network hiccup, etc.),
-    // don't leave the rest of the page's playables waiting on it forever.
-    setTimeout(unblockAfterHero, 12000);
-  } else {
-    heroLoaded = true; // no hero on this page — nothing to wait for
+  if (heroPreview) {
+    var heroPlayPromise = heroPreview.play();
+    if (heroPlayPromise && heroPlayPromise.catch) heroPlayPromise.catch(function () {});
   }
 
   /* ---------- reveal on scroll ---------- */
@@ -726,57 +680,46 @@
 
   /* ---------- phone builder ---------- */
   function buildPlayablePhone(p) {
-    // Starts loading until setupPlayablesCarousel's startLoad() assigns a
-    // real src and the iframe reports back, see there.
-    var phone = el("div", { className: "phone phone--static is-loading" });
+    var phone = el("div", { className: "phone phone--static" });
     phone.appendChild(el("div", { className: "phone__edge" }));
     var body = el("div", { className: "phone__body" });
-    body.appendChild(el("div", { className: "phone__notch" }));
     var screen = el("div", { className: "phone__screen" });
-    // No src yet — assigned by setupPlayablesCarousel, staggered so the
-    // phones that aren't shown first don't all fight for bandwidth/CPU
-    // at once on page load.
-    var iframe = el("iframe", { title: p.title, allow: "accelerometer; gyroscope" });
-    wireDragThrough(iframe);
-    // Cheap stand-in for the inactive state: a muted looping clip instead
-    // of a live (but hidden) iframe, so sitting inactive costs ~nothing.
-    var video = el("video", { muted: true, loop: true, playsInline: true, preload: "auto" });
+    // Just a muted looping clip, forever — the real playable never runs
+    // inline, only in the modal (see openPlayable), so there's nothing
+    // here to load or swap.
+    var video = el("video", { muted: true, loop: true, playsInline: true, preload: "auto", autoplay: true });
     if (p.preview) video.src = p.preview;
     var selectBtn = el("button", { type: "button", className: "phone__select", "aria-label": p.ctaPlay + " " + p.title });
-    var loader = el("div", { className: "phone__loader", "aria-hidden": "true" });
-    screen.appendChild(iframe);
     screen.appendChild(video);
     screen.appendChild(selectBtn);
-    screen.appendChild(loader);
     body.appendChild(screen);
     phone.appendChild(body);
-    phone._iframe = iframe;
+    phone.appendChild(el("div", { className: "phone__notch" }));
+    phone.appendChild(el("div", { className: "phone__frame" }));
     phone._video = video;
     phone._selectBtn = selectBtn;
     return phone;
   }
 
   /* ---------- playables carousel ----------
-     Every phone loads its real playable in the background so it's ready
-     the instant it's picked, but only the active, on-screen one is ever
-     actually running — every other phone sits paused (see pausePlayable)
-     behind its preview loop. A phone's box (and the iframe inside it) is
-     always 260px wide — active/inactive is purely a transform: scale() in CSS,
-     never a width change, so the row's height is rock solid and the
-     iframe's content never has to notice a resize. Clicking one hands it
-     the red "active" border, scales it up, and centers it.
+     Every phone here is just its preview clip, forever — tapping one
+     either centers it (if it wasn't the active one) or opens the full
+     playable in the shared modal (if it already was). Nothing ever loads
+     or runs inline, so there's no background queue and no per-phone
+     "ready" state to track.
+
+     A phone's box is always a constant width — active/inactive is purely
+     a transform: scale() in CSS, never a width change, so the row's
+     height is rock solid. Clicking one hands it the red "active" border,
+     scales it up, and centers it.
 
      The row is paged entirely by code, never by the user dragging or
-     swiping it — including over an active phone's iframe, which (being its
-     own document) earlier attempts at blocking just that one axis with
-     touch-action or a touchmove guard couldn't reach reliably. So rather
-     than fighting a native scroll container's touch handling, there isn't
-     one: .playables-grid (see CSS) is a plain overflow:hidden viewport, and
-     .playables-track — the actual flex row of cards — is moved by setting
-     its own `transform: translateX()`, which touch/click never drives on
-     its own. A swipe or tap landing anywhere in this area, iframe included,
-     is therefore just a normal page-scroll/tap everywhere outside it would
-     be: nothing here intercepts it. */
+     swiping it: .playables-grid (see CSS) is a plain overflow:hidden
+     viewport, and .playables-track — the actual flex row of cards — is
+     moved by setting its own `transform: translateX()`, which touch/click
+     never drives on its own. A swipe or tap landing anywhere in this area
+     is therefore just a normal page-scroll/tap everywhere outside it
+     would be: nothing here intercepts it. */
   function setupPlayablesCarousel(grid, track, entries, navButtons) {
     var activeIndex = -1;
     var trackX = 0;
@@ -799,166 +742,34 @@
       track.style.transform = "translateX(" + trackX + "px)";
     }
 
-    // Points the iframe at url and tracks readiness; fires the pending
-    // onReady callback (see below) once THIS navigation's load lands.
-    function startLoad(entry, url) {
-      entry._ready = false;
-      entry.phone.classList.add("is-loading");
-      entry.iframe.src = url;
-      entry.iframe.onload = function () {
-        entry._ready = true;
-        entry.phone.classList.remove("is-loading");
-        // Paused by default on every load, active or not: these playables
-        // auto-start themselves the moment they're ready, and most loads
-        // here are background/queued ones that have no business making
-        // noise yet. showIframe's reveal callback below is the only place
-        // that resumes one.
-        pausePlayable(entry.iframe);
-        var cb = entry._onReady;
-        entry._onReady = null;
-        if (cb) cb();
-      };
-    }
-
-    // Runs callback once entry's current load finishes — immediately if it
-    // already has. Used by showIframe to know when it's safe to pull the
-    // video away; showVideo cancels a pending one below (nothing left to
-    // reveal once the phone's gone inactive again).
-    function onReady(entry, callback) {
-      if (entry._ready) callback();
-      else entry._onReady = callback;
-    }
-
-    function loadEntry(entry, onDone) {
-      entry._loaded = true; // reserved now so a second call can't double-trigger
-      // Hero (top of page) gets the network/CPU first; everything here —
-      // including the featured phone shown right away — queues behind it.
-      // whenIdle gives the main thread a breather after whatever just
-      // finished, rather than chaining the next heavy init instantly off
-      // the previous one's load event.
-      afterHeroLoads(function () {
-        whenIdle(function () {
-          startLoad(entry, entry.url);
-          // A separate hook from onReady/_onReady above — this one drives
-          // the background queue and must survive a showVideo() reset,
-          // since the phone might get deactivated before its load lands.
-          if (onDone) entry.iframe.addEventListener("load", onDone, { once: true });
-        });
-      });
-    }
-
-    // Starts the real src the first time — a fallback for when a phone
-    // gets clicked before its turn in the background queue comes up.
-    function ensureLoaded(entry) {
-      if (!entry._loaded) loadEntry(entry, null);
-    }
-
-    // Swaps iframe->video. restart=true for an actual game switch (fresh
-    // clip); omitted when just scrolling offscreen, where resuming the
-    // clip wherever it was reads fine and there's no "new game" to signal.
-    //
-    // Hides the iframe with opacity, not display: display:none collapses
-    // its layout box (and so the canvas inside it) to 0x0, and a WebGL
-    // playable whose render loop is still ticking away behind it then spams
-    // "GL_INVALID_FRAMEBUFFER_OPERATION: zero size" trying to draw into
-    // that. opacity keeps the box (and canvas) its real size, so it still
-    // just draws into a frame nobody sees — no error, same cost — and (see
-    // CSS) avoids visibility's compositor-layer-recreation flash on top.
-    function showVideo(entry, restart) {
-      clearTimeout(entry._revealTimer);
-      entry._onReady = null; // don't let a late load() from before yank the video away now
-      entry.iframe.style.opacity = "0";
-      entry.iframe.style.pointerEvents = "none";
-      entry.video.style.display = "";
-      if (restart) entry.video.currentTime = 0;
-      entry.video.play();
-      // The opacity swap above only hides the picture — left alone the game
-      // keeps simulating (and playing audio) behind it. Pause it explicitly
-      // rather than relying on the reload startLoad() does elsewhere, since
-      // this also runs for the plain "scrolled offscreen" case that never
-      // reloads at all.
-      pausePlayable(entry.iframe);
-    }
-
-    // Swaps video->iframe. If the iframe isn't done loading yet (first
-    // view, or still mid-reload from last time it was active), the video
-    // keeps playing as a stand-in until it actually finishes — otherwise
-    // a slow playable would show a blank/white iframe instead of motion.
-    // Either way there's a short overlap after "ready" (see CSS z-index):
-    // 450ms, not 150 — the load event fires once the HTML/JS is down, but
-    // Unity still needs a beat after that to paint an actual frame, and a
-    // too-short overlap just trades the flicker for a slightly later one.
-    function showIframe(entry) {
-      ensureLoaded(entry);
-      entry.iframe.style.opacity = "1";
-      entry.iframe.style.pointerEvents = "";
-      clearTimeout(entry._revealTimer);
-      onReady(entry, function () {
-        // Freeze the mask the moment it's known the iframe is about to take
-        // over, instead of leaving it decoding new frames through the
-        // overlap: Unity's heavy WebGL/shader-compile work lands on the GPU
-        // right as the iframe is revealed, and a hardware video decoder
-        // starved by that contention can hand the compositor a black frame
-        // for an instant — on top or not, a black "mask" frame is still
-        // black. A paused frame has nothing left to decode, so there's
-        // nothing for the GPU to starve.
-        entry.video.pause();
-        resumePlayable(entry.iframe);
-        entry._revealTimer = setTimeout(function () {
-          entry.video.style.display = "none";
-        }, 450);
-      });
-    }
-
     function selectPlayable(index, opts) {
       opts = opts || {};
       var entry = entries[index];
       if (index !== activeIndex) {
         if (activeIndex !== -1) {
-          var prev = entries[activeIndex];
-          prev.phone.classList.remove("is-active");
+          entries[activeIndex].phone.classList.remove("is-active");
           if (navButtons) navButtons[activeIndex].classList.remove("is-active");
-          // Hidden (not just reloaded) so it stops costing anything while
-          // inactive; reloaded too, so it's back to a clean start rather
-          // than resuming mid-game next time it's picked. The reload runs
-          // in the background behind display:none, invisible to the user.
-          showVideo(prev, true);
-          startLoad(prev, prev.url);
         }
         entry.phone.classList.add("is-active");
         if (navButtons) navButtons[index].classList.add("is-active");
         activeIndex = index;
-        if (!isOffscreen) showIframe(entry);
+        centerCard(entry.card, opts.instant);
+      } else {
+        openPlayable(entry.url, entry.title, entry.genre, entry.preview);
       }
-      centerCard(entry.card, opts.instant);
     }
 
-    // Pause the active phone (and show its preview loop) while the whole
-    // row is scrolled out of view, so walking away from it doesn't leave a
-    // live game (and its audio) running unseen; reloads fresh on return,
-    // same as switching games above — there's no "resume" once it's been
-    // fully silenced.
-    var isOffscreen = false;
+    // Pausing the preview clips while the whole row is scrolled out of
+    // view is a cheap battery/CPU win now that there's nothing heavier
+    // (no live iframes) running behind them — resumed the moment it's
+    // back on screen.
     if (grid._carouselVisibility) grid._carouselVisibility.disconnect();
     var visibilityObserver = new IntersectionObserver(function (obsEntries) {
       obsEntries.forEach(function (e) {
-        var wasOffscreen = isOffscreen;
-        isOffscreen = !e.isIntersecting;
-        if (activeIndex === -1) return;
-        var active = entries[activeIndex];
-        if (isOffscreen) {
-          showVideo(active);
-          if (!wasOffscreen) {
-            // showVideo only swaps the picture — the iframe keeps running
-            // (and making noise) behind it. Actually unload it so the row
-            // is silent while scrolled away; startLoad below brings it
-            // back fresh once it's back in view.
-            active.iframe.src = "about:blank";
-          }
-        } else if (wasOffscreen) {
-          startLoad(active, active.url);
-          showIframe(active);
-        }
+        entries.forEach(function (entry) {
+          if (e.isIntersecting) entry.video.play();
+          else entry.video.pause();
+        });
       });
     });
     visibilityObserver.observe(grid);
@@ -992,29 +803,6 @@
     for (var i = 0; i < entries.length; i++) {
       if (entries[i].featured) { initial = i; break; }
     }
-    // Only the initially-active phone's iframe loads right away. The rest
-    // start out hidden behind their preview clip and load strictly one at
-    // a time — each only starts once the previous one's load event has
-    // actually landed — instead of fixed timers (which can bunch up) or
-    // all piling onto the network/CPU at once on page load.
-    var queue = [];
-    entries.forEach(function (entry, index) {
-      if (index === initial) {
-        entry.video.style.display = "none";
-      } else {
-        entry.iframe.style.opacity = "0";
-        entry.iframe.style.pointerEvents = "none";
-        entry.video.play();
-        queue.push(entry);
-      }
-    });
-    function loadNextQueued() {
-      var next = queue.shift();
-      if (!next) return;
-      if (next._loaded) { loadNextQueued(); return; } // clicked early, already loading — skip
-      loadEntry(next, loadNextQueued);
-    }
-    loadNextQueued();
     selectPlayable(initial, { instant: true });
   }
 
@@ -1084,7 +872,10 @@
         ])
       ]);
       playablesTrack.appendChild(card);
-      return { card: card, phone: phone, iframe: phone._iframe, video: phone._video, selectBtn: phone._selectBtn, url: p.url, featured: !!p.featured };
+      return {
+        card: card, phone: phone, video: phone._video, selectBtn: phone._selectBtn,
+        url: p.url, title: p.title, genre: p.genre, preview: p.preview, featured: !!p.featured
+      };
     });
 
     var playablesNav = $("playablesNav");
@@ -1102,6 +893,20 @@
     });
 
     setupPlayablesCarousel(playablesGrid, playablesTrack, playableEntries, navButtons);
+
+    // Hero's phone shows the same featured playable — wire its tap target
+    // now that this language's title/url/preview are known. Re-render
+    // (language switch) replaces the handler instead of stacking another.
+    var heroPlayBtn = $("heroPlayBtn");
+    if (heroPlayBtn) {
+      var featured = ordered.filter(function (p) { return p.featured; })[0] || ordered[0];
+      heroPlayBtn.setAttribute("aria-label", featured.ctaPlay + " " + featured.title);
+      if (heroPlayBtn._clickHandler) heroPlayBtn.removeEventListener("click", heroPlayBtn._clickHandler);
+      heroPlayBtn._clickHandler = function () {
+        openPlayable(featured.url, featured.title, featured.genre, featured.preview);
+      };
+      heroPlayBtn.addEventListener("click", heroPlayBtn._clickHandler);
+    }
 
     var gamesRow = $("gamesRow");
     clear(gamesRow);

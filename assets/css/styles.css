@@ -279,19 +279,53 @@ body {
   border-radius: var(--phone-radius);
   background: var(--ink);
   overflow: hidden;
-  box-shadow: none;
+  /* Masks a hairline gap that otherwise shows the page background through the
+     rounded corners: overflow:hidden clips the screen (a plain rect) to the
+     border-radius curve, but anti-aliasing of that clip doesn't perfectly
+     meet the border's own curve, leaving a sliver right at the edge. An
+     inset ring in the same ink color as the body sits right at that seam
+     and paints over it. */
+  box-shadow: inset 0 0 0 1px var(--ink);
   transition: border-color 420ms ease;
 }
+/* Sibling of .phone__body, not a child: it's positioned against .phone's own
+   box (border included), so its solid ink fill paints straight over the
+   border instead of merely butting up against it. Butting two independently
+   anti-aliased edges (the CSS `border` and an overflow-clipped child) left a
+   hairline seam between them that no amount of matching color could patch
+   from inside the clip. Height = the 8px border it now covers + the
+   original 16px of visible notch below it; top:0 anchors it to the same
+   point the border starts from, so the two are never adjacent, only
+   overlapping. */
 .phone__notch {
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
   width: 46%;
-  height: 16px;
+  height: 24px;
   background: var(--ink);
   border-radius: 0 0 9.6px 9.6px;
   z-index: 4;
+  /* Extends the solid fill 1px past the notch's own rounded bottom edge: the
+     screen media (iframe/video, its own compositor layer) anti-aliases
+     against that curve a touch differently than the notch does, leaving a
+     hairline gap right under it otherwise. */
+  box-shadow: 0 1px 0 var(--ink);
+}
+/* Decorative ring drawn on top of the notch (z-index above it), so the
+   notch sits under the frame rather than the frame being just a border
+   baked into .phone__body underneath everything else. Transparent center +
+   pointer-events:none: it's purely a visual cap, clicks must still reach
+   .phone__select/the iframe beneath it. */
+.phone__frame {
+  position: absolute;
+  inset: 0;
+  border: 8px solid var(--ink);
+  border-radius: var(--phone-radius);
+  pointer-events: none;
+  z-index: 5;
+  transition: border-color 420ms ease;
 }
 .phone__screen {
   position: absolute;
@@ -343,7 +377,30 @@ body {
   cursor: pointer;
 }
 .phone.is-active .phone__select { pointer-events: none; }
-.phone--lg { width: 240px; --phone-radius: 31.2px; }
+/* 1.5x the old 240px, but capped against both viewport axes so the modal's
+   title bar (~56px: text row + buttons + margin) and the phone never
+   outgrow the dialog's own 73.6vw / 73.6vh ceiling on short or narrow
+   screens. --phone-radius keeps the original 0.13-of-width ratio instead of
+   a fixed px value, since the width itself now varies continuously. */
+.phone--lg {
+  --phone-lg-w: clamp(200px, min(70vw, calc((73.6vh - 56px) * 0.5625)), 360px);
+  width: var(--phone-lg-w);
+  --phone-radius: calc(var(--phone-lg-w) * 0.13);
+  /* Shallower turn than the base .phone rest pose (-18deg), plus a slight
+     upward tilt — the modal's phone sits front and center, so it reads
+     better close to straight-on with just a touch of looking-up angle. */
+  transform: perspective(720px) rotateX(5deg) rotateY(-8deg);
+}
+.phone--lg .phone__edge {
+  /* Same degree-to-offset rate the hero's JS wobble uses (enableTilt):
+     the edge-amount-per-degree is anchored to the rest pose's -18deg turn
+     (edgeAmount / 18), not to this phone's own, much shallower rotateY —
+     anchoring it to -8 instead (as a naive restX/|restY| re-derivation
+     would) inflates the rate and sends the edge sliver way further than
+     this small a tilt should. Evaluated at rotateX 5deg / rotateY -8deg:
+     X = amount * 8/18, Y = amount * 5/18. */
+  transform: translate(calc(var(--phone-edge-amount) * 8 / 18), calc(var(--phone-edge-amount) * 5 / 18));
+}
 .phone--hero { width: 320px; --phone-radius: 41.6px; }
 @media (max-width: 1100px) {
   .phone--hero { width: 256px; --phone-radius: 33.6px; }
@@ -370,33 +427,48 @@ body {
   transform: translate(calc(var(--phone-edge-amount) * 7 / 9), calc(var(--phone-edge-amount) / 9));
 }
 
-/* Loading indicator — top-right of the screen, shown while a phone's
-   playable iframe is loading (see main.js is-loading toggling). A half
-   ring (two adjacent border sides colored, the rest transparent) spinning
-   reads as "working", not decorative, so it stays exempt from the
-   no-shadow/no-gradient rules that apply to the rest of the UI. */
-.phone__loader {
+/* Loading overlay inside the full-screen player modal: a blurred freeze
+   frame of the playable's own preview clip (see main.js primeBackdrop)
+   behind a circular ring that fills with real download progress (bytes
+   fetched vs. Content-Length — see loadIntoPlayer), with the same N/All
+   reading below it. Shown only while main.js has the modal's phone marked
+   is-loading; both the ring and the backdrop disappear together the
+   moment the fetched playable actually loads into the iframe. */
+.player-loading {
   display: none;
   position: absolute;
-  top: 8px;
-  right: 8px;
+  inset: 0;
   z-index: 5;
-  width: 35.2px;
-  height: 35.2px;
-  border-radius: 50%;
-  border: 4.8px solid color-mix(in srgb, var(--paper) 30%, transparent);
-  border-top-color: var(--accent);
-  border-right-color: var(--accent);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
   pointer-events: none;
-  animation: phone-loader-spin 0.7s linear infinite;
 }
-.phone.is-loading .phone__loader { display: block; }
-@keyframes phone-loader-spin {
-  to { transform: rotate(360deg); }
+.phone.is-loading .player-loading { display: flex; }
+.player-loading__ring { transform: rotate(-90deg); }
+.player-loading__track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--paper) 30%, transparent);
+  stroke-width: 4.8px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .phone__loader { animation: none; }
+.player-loading__fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 4.8px;
+  transition: stroke-dashoffset 120ms linear;
 }
+.player-loading__label {
+  font-family: var(--font-mono);
+  font-size: 11.2px;
+  letter-spacing: 0.04em;
+  color: var(--paper);
+}
+#playerBackdrop {
+  display: none;
+  filter: blur(14px);
+}
+.phone.is-loading #playerBackdrop { display: block; }
 
 /* ==========================================================================
    Section scaffolding
@@ -718,6 +790,7 @@ html[lang="en"] .gamefeel__btn { background-image: url("../button_en.png"); }
 /* Accent border marks the active (centered) phone, not a fixed "featured"
    one — it moves with selection, so it needs its own class, not --featured. */
 .phone.is-active .phone__body { border-color: var(--accent); }
+.phone.is-active .phone__frame { border-color: var(--accent); }
 .phone.is-active .phone__edge { background: linear-gradient(to bottom left, color-mix(in srgb, var(--accent) 75%, var(--paper) 25%) 45%, color-mix(in srgb, var(--accent) 55%, var(--ink) 45%) 55%); }
 .playable-card__caption { margin-top: var(--sp-2); text-align: center; }
 .playable-card__title { font-family: var(--font-text); font-weight: 500; font-size: 12.8px; }
