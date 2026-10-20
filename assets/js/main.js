@@ -812,6 +812,18 @@
         // noise yet. showIframe's reveal callback below is the only place
         // that resumes one.
         pausePlayable(entry.iframe);
+        // .playables-grid's touch-action: pan-y (see CSS) only governs touch
+        // starting on the OUTER document — once a phone is active, taps land
+        // directly on its iframe (pointer-events re-enabled above in
+        // showIframe), and touch-action doesn't cross a frame boundary: the
+        // swipe is decided by the IFRAME's own document, which defaults to
+        // "auto" and happily hands it to the grid as a horizontal scroll.
+        // Same-origin (see wireDragThrough above), so mirror the restriction
+        // straight onto the loaded document instead.
+        try {
+          var doc = entry.iframe.contentDocument;
+          if (doc && doc.documentElement) doc.documentElement.style.touchAction = "pan-y";
+        } catch (e) { /* not reachable: outer grid's touch-action is the fallback */ }
         var cb = entry._onReady;
         entry._onReady = null;
         if (cb) cb();

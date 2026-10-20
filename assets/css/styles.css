@@ -189,11 +189,17 @@ body {
   .site-header__nav { display: none; }
 }
 
+@media (min-width: 861px) {
+  .site-header__name { font-size: 26px; }
+  .site-header__nav a { font-size: 24px; }
+  .btn { font-size: 24px; }
+}
+
 /* ==========================================================================
    Hero
    ========================================================================== */
 .hero {
-  padding: var(--sp-5) 0 var(--sp-4);
+  padding: var(--sp-4) 0 var(--sp-4);
   border-bottom: var(--rule);
 }
 .hero__grid {
