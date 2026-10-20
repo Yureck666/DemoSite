@@ -2,7 +2,20 @@
   "use strict";
 
   var STORAGE_KEY = "site-lang";
-  var state = { lang: localStorage.getItem(STORAGE_KEY) || "ru" };
+
+  function detectLang() {
+    var saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === "ru" || saved === "en") return saved;
+    var browserLangs = navigator.languages && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language || "en"];
+    for (var i = 0; i < browserLangs.length; i++) {
+      if (/^ru/i.test(browserLangs[i])) return "ru";
+    }
+    return "en";
+  }
+
+  var state = { lang: detectLang() };
   var prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* ---------- small DOM helpers ---------- */

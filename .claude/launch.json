@@ -4,8 +4,9 @@
     {
       "name": "demosite",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8098"],
-      "port": 8098
+      "runtimeArgs": ["-c", "import os,http.server,socketserver;port=int(os.environ.get('PORT','8098'));socketserver.TCPServer(('',port),http.server.SimpleHTTPRequestHandler).serve_forever()"],
+      "port": 8098,
+      "autoPort": true
     }
   ]
 }
