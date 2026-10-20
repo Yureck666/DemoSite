@@ -709,7 +709,16 @@
     function centerCard(card, instant) {
       var gridRect = grid.getBoundingClientRect();
       var cardRect = card.getBoundingClientRect();
-      var delta = (cardRect.left + cardRect.width / 2) - (gridRect.left + gridRect.width / 2);
+      // getBoundingClientRect() reports post-zoom (visual) pixels, but
+      // scrollLeft/scrollTo operate in pre-zoom (layout) pixels — under the
+      // site's `zoom: 0.8` (see styles.css) those units disagree, so a delta
+      // measured in rect-space has to be rescaled before it's handed to
+      // scrollTo, or every jump lands short (converging only on repeat
+      // clicks to the same card, since each call corrects part of the gap
+      // its predecessor left behind). clientWidth/gridRect.width is 1 when
+      // there's no zoom, so this is a no-op outside this page's setup.
+      var zoomRatio = grid.clientWidth / gridRect.width;
+      var delta = ((cardRect.left + cardRect.width / 2) - (gridRect.left + gridRect.width / 2)) * zoomRatio;
       grid.scrollTo({ left: grid.scrollLeft + delta, behavior: (instant || prefersReducedMotion) ? "auto" : "smooth" });
     }
 
