@@ -31,10 +31,16 @@
   var playerOpenNewTab = $("playerOpenNewTab");
   var currentPlayableUrl = "";
 
+  var playerPhone = modal.querySelector(".phone--lg");
+  playerFrame.addEventListener("load", function () {
+    playerPhone.classList.remove("is-loading");
+  });
+
   function openPlayable(url, title, genre) {
     currentPlayableUrl = url;
     playerTitle.textContent = title;
     playerGenre.textContent = genre || "";
+    playerPhone.classList.add("is-loading");
     playerFrame.src = url;
     playerOpenNewTab.href = url;
     if (typeof modal.showModal === "function") {
@@ -48,7 +54,10 @@
     playerFrame.src = "about:blank";
   }
   $("playerRestart").addEventListener("click", function () {
-    if (currentPlayableUrl) playerFrame.src = currentPlayableUrl;
+    if (currentPlayableUrl) {
+      playerPhone.classList.add("is-loading");
+      playerFrame.src = currentPlayableUrl;
+    }
   });
   $("playerClose").addEventListener("click", closePlayable);
   modal.addEventListener("click", function (e) {
@@ -145,13 +154,29 @@
     }
     syncHero(); // starts on the preview loop until the real frame loads
     heroFrame.addEventListener("load", function () {
+      // Also fires for the "about:blank" unload below — ignore that one,
+      // it's not the real game becoming ready.
+      if (heroFrame.src === "about:blank") return;
       heroReady = true;
+      heroPhone.classList.remove("is-loading");
       syncHero();
       unblockAfterHero();
     });
     new IntersectionObserver(function (obsEntries) {
       obsEntries.forEach(function (e) {
+        var wasOffscreen = heroOffscreen;
         heroOffscreen = !e.isIntersecting;
+        if (heroOffscreen && !wasOffscreen) {
+          // Hiding it with opacity (see above) only stops the picture —
+          // the game keeps running behind it, audio and all. Actually
+          // unload it so sitting offscreen is silent too; reloaded fresh
+          // on return below.
+          heroReady = false;
+          heroFrame.src = "about:blank";
+        } else if (!heroOffscreen && wasOffscreen) {
+          heroPhone.classList.add("is-loading");
+          heroFrame.src = HERO_URL;
+        }
         syncHero();
       });
     }).observe(heroPhone);
@@ -606,7 +631,9 @@
 
   /* ---------- phone builder ---------- */
   function buildPlayablePhone(p) {
-    var phone = el("div", { className: "phone phone--static" });
+    // Starts loading until setupPlayablesCarousel's startLoad() assigns a
+    // real src and the iframe reports back, see there.
+    var phone = el("div", { className: "phone phone--static is-loading" });
     phone.appendChild(el("div", { className: "phone__edge" }));
     var body = el("div", { className: "phone__body" });
     body.appendChild(el("div", { className: "phone__notch" }));
@@ -619,9 +646,11 @@
     // of a live (but hidden) iframe, so sitting inactive costs ~nothing.
     var video = el("video", { src: p.preview, muted: true, loop: true, playsInline: true, preload: "auto" });
     var selectBtn = el("button", { type: "button", className: "phone__select", "aria-label": p.ctaPlay + " " + p.title });
+    var loader = el("div", { className: "phone__loader", "aria-hidden": "true" });
     screen.appendChild(iframe);
     screen.appendChild(video);
     screen.appendChild(selectBtn);
+    screen.appendChild(loader);
     body.appendChild(screen);
     phone.appendChild(body);
     phone._iframe = iframe;
@@ -664,9 +693,11 @@
     // onReady callback (see below) once THIS navigation's load lands.
     function startLoad(entry, url) {
       entry._ready = false;
+      entry.phone.classList.add("is-loading");
       entry.iframe.src = url;
       entry.iframe.onload = function () {
         entry._ready = true;
+        entry.phone.classList.remove("is-loading");
         var cb = entry._onReady;
         entry._onReady = null;
         if (cb) cb();
@@ -781,16 +812,30 @@
 
     // Pause the active phone (and show its preview loop) while the whole
     // row is scrolled out of view, so walking away from it doesn't leave a
-    // live game running unseen; resumes right where it was on return.
+    // live game (and its audio) running unseen; reloads fresh on return,
+    // same as switching games above — there's no "resume" once it's been
+    // fully silenced.
     var isOffscreen = false;
     if (grid._carouselVisibility) grid._carouselVisibility.disconnect();
     var visibilityObserver = new IntersectionObserver(function (obsEntries) {
       obsEntries.forEach(function (e) {
+        var wasOffscreen = isOffscreen;
         isOffscreen = !e.isIntersecting;
         if (activeIndex === -1) return;
         var active = entries[activeIndex];
-        if (isOffscreen) showVideo(active);
-        else showIframe(active);
+        if (isOffscreen) {
+          showVideo(active);
+          if (!wasOffscreen) {
+            // showVideo only swaps the picture — the iframe keeps running
+            // (and making noise) behind it. Actually unload it so the row
+            // is silent while scrolled away; startLoad below brings it
+            // back fresh once it's back in view.
+            active.iframe.src = "about:blank";
+          }
+        } else if (wasOffscreen) {
+          startLoad(active, active.url);
+          showIframe(active);
+        }
       });
     });
     visibilityObserver.observe(grid);

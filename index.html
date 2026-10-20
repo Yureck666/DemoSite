@@ -49,7 +49,7 @@
       </div>
       <div>
         <div class="hero__device-wrap">
-          <div class="phone phone--hero" id="heroPhone">
+          <div class="phone phone--hero is-loading" id="heroPhone">
             <div class="phone__edge"></div>
             <div class="phone__body">
               <div class="phone__notch"></div>
@@ -58,6 +58,7 @@
                 <iframe id="heroFrame" title="Idle Miner — live demo"
                   allow="accelerometer; gyroscope"></iframe>
                 <video id="heroPreview" src="assets/Playables Preview/Miner.mp4" muted loop playsinline preload="auto" style="display:none"></video>
+                <div class="phone__loader" aria-hidden="true"></div>
               </div>
             </div>
           </div>
@@ -206,6 +207,7 @@
         <div class="phone__notch"></div>
         <div class="phone__screen">
           <iframe id="playerFrame" title="Playable demo" src="about:blank" allow="accelerometer; gyroscope"></iframe>
+          <div class="phone__loader" aria-hidden="true"></div>
         </div>
       </div>
     </div>
