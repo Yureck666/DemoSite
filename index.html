@@ -14,9 +14,9 @@
      (and with it everything that isn't hardcoded as static HTML, like the
      hero text). preload+onload swap avoids that; noscript covers no-JS. -->
 <link rel="preload" as="style"
-  href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+  href="https://fonts.googleapis.com/css2?family=PT+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
   onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"></noscript>
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"></noscript>
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
@@ -67,6 +67,17 @@
     </div>
   </section>
 
+  <!-- Experience -->
+  <section class="section" id="experience">
+    <div class="container">
+      <div class="section__head" data-reveal>
+        <span class="section__index" id="expIndex"></span>
+        <h2 class="section__title" id="expTitle"></h2>
+      </div>
+      <div class="exp-list" id="expList"></div>
+    </div>
+  </section>
+
   <!-- Game Feel interactive demo -->
   <section class="section gamefeel-section" id="gamefeel">
     <div class="container">
@@ -114,17 +125,6 @@
           <button type="button" class="gamefeel__all" id="gfToggleAll"></button>
         </div>
       </div>
-    </div>
-  </section>
-
-  <!-- Experience -->
-  <section class="section" id="experience">
-    <div class="container">
-      <div class="section__head" data-reveal>
-        <span class="section__index" id="expIndex"></span>
-        <h2 class="section__title" id="expTitle"></h2>
-      </div>
-      <div class="exp-list" id="expList"></div>
     </div>
   </section>
 

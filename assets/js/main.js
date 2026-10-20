@@ -69,6 +69,22 @@
     playerFrame.src = "about:blank";
   });
 
+  /* ---------- playable SDK lifecycle control ----------
+     These playable builds start themselves the moment their own scripts
+     finish loading — there's no "stay idle" flag, so an iframe that's
+     merely hidden behind opacity/a preview video keeps actually
+     simulating (and playing audio) the whole time. The SDK they're built
+     with listens for these window-level events as its own pause/resume
+     API; "unsafe" additionally mutes/unmutes and queues internally if
+     sent before the playable has finished initializing, so it's safe to
+     call right after onload fires, win or lose the race with startup. */
+  function pausePlayable(iframe) {
+    try { iframe.contentWindow.dispatchEvent(new Event("luna:unsafe:pause")); } catch (e) {}
+  }
+  function resumePlayable(iframe) {
+    try { iframe.contentWindow.dispatchEvent(new Event("luna:unsafe:resume")); } catch (e) {}
+  }
+
   /* ---------- defer heavy work off the page's own first paint ----------
      Unity WebGL startup (wasm instantiation, shader compile, GL context)
      is a genuinely heavy one-off hit on the main thread — kicking it off
@@ -90,7 +106,7 @@
      to itself; afterHeroLoads() lets the playables carousel (built later,
      in renderProjects) queue its own loading behind it instead of all four
      carousel iframes competing with the hero's load right out of the gate. */
-  var HERO_URL = "https://yureck666.github.io/IdleMinerDemo/";
+  var HERO_URL = "assets/playables/idleminerdemo/index.html";
   var heroLoaded = false;
   var heroLoadWaiters = [];
   function afterHeroLoads(fn) {
@@ -138,6 +154,7 @@
         heroPreview.pause();
         heroFrame.style.opacity = "1";
         heroFrame.style.pointerEvents = "";
+        resumePlayable(heroFrame);
         // 450ms, not 150: the iframe's own load event fires once its HTML/JS
         // has downloaded, but Unity still needs a beat after that to actually
         // paint a real frame — too short an overlap here means a flash of
@@ -150,6 +167,10 @@
         heroFrame.style.pointerEvents = "none";
         heroPreview.style.display = "";
         heroPreview.play();
+        // Covers the loading window too, not just "ready but offscreen":
+        // without this the game auto-starts (audio and all) the moment its
+        // own scripts finish, well before the reveal above ever runs.
+        pausePlayable(heroFrame);
       }
     }
     syncHero(); // starts on the preview loop until the real frame loads
@@ -644,7 +665,8 @@
     var iframe = el("iframe", { title: p.title, allow: "accelerometer; gyroscope" });
     // Cheap stand-in for the inactive state: a muted looping clip instead
     // of a live (but hidden) iframe, so sitting inactive costs ~nothing.
-    var video = el("video", { src: p.preview, muted: true, loop: true, playsInline: true, preload: "auto" });
+    var video = el("video", { muted: true, loop: true, playsInline: true, preload: "auto" });
+    if (p.preview) video.src = p.preview;
     var selectBtn = el("button", { type: "button", className: "phone__select", "aria-label": p.ctaPlay + " " + p.title });
     var loader = el("div", { className: "phone__loader", "aria-hidden": "true" });
     screen.appendChild(iframe);
@@ -660,9 +682,11 @@
   }
 
   /* ---------- playables carousel ----------
-     Every phone shows its real playable live and keeps running in the
-     background. A phone's box (and the iframe inside it) is always
-     260px wide — active/inactive is purely a transform: scale() in CSS,
+     Every phone loads its real playable in the background so it's ready
+     the instant it's picked, but only the active, on-screen one is ever
+     actually running — every other phone sits paused (see pausePlayable)
+     behind its preview loop. A phone's box (and the iframe inside it) is
+     always 260px wide — active/inactive is purely a transform: scale() in CSS,
      never a width change, so the row's height is rock solid and the
      iframe's content never has to notice a resize. Clicking one hands it
      the red "active" border, scales it up, and scrolls it to center; the
@@ -698,6 +722,12 @@
       entry.iframe.onload = function () {
         entry._ready = true;
         entry.phone.classList.remove("is-loading");
+        // Paused by default on every load, active or not: these playables
+        // auto-start themselves the moment they're ready, and most loads
+        // here are background/queued ones that have no business making
+        // noise yet. showIframe's reveal callback below is the only place
+        // that resumes one.
+        pausePlayable(entry.iframe);
         var cb = entry._onReady;
         entry._onReady = null;
         if (cb) cb();
@@ -756,6 +786,12 @@
       entry.video.style.display = "";
       if (restart) entry.video.currentTime = 0;
       entry.video.play();
+      // The opacity swap above only hides the picture — left alone the game
+      // keeps simulating (and playing audio) behind it. Pause it explicitly
+      // rather than relying on the reload startLoad() does elsewhere, since
+      // this also runs for the plain "scrolled offscreen" case that never
+      // reloads at all.
+      pausePlayable(entry.iframe);
     }
 
     // Swaps video->iframe. If the iframe isn't done loading yet (first
@@ -781,6 +817,7 @@
         // black. A paused frame has nothing left to decode, so there's
         // nothing for the GPU to starve.
         entry.video.pause();
+        resumePlayable(entry.iframe);
         entry._revealTimer = setTimeout(function () {
           entry.video.style.display = "none";
         }, 450);
@@ -950,11 +987,7 @@
 
     var playablesGrid = $("playablesGrid");
     clear(playablesGrid);
-    var items = d.projects.playables;
-    var featured = items.filter(function (p) { return p.featured; });
-    var rest = items.filter(function (p) { return !p.featured; });
-    var mid = Math.ceil(rest.length / 2);
-    var ordered = rest.slice(0, mid).concat(featured, rest.slice(mid));
+    var ordered = d.projects.playables;
     var playableEntries = ordered.map(function (p) {
       var phone = buildPlayablePhone(p);
       var card = el("div", { className: "playable-card", "data-reveal": "" }, [
