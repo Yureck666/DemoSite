@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper:   #F6F3EC;
+    --paper-2: #EBE6DA;
+    --ink:     #17171A;
+    --muted:   #6B6A66;
+    --accent:  #E8452C;
+    --rule:    1px solid rgba(23, 23, 26, 0.18);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1200px;
+    height: 630px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Schibsted Grotesk', sans-serif;
+    overflow: hidden;
+  }
+  .card {
+    width: 1200px;
+    height: 630px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 56px 64px;
+  }
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .mark__box {
+    width: 34px;
+    height: 34px;
+    background: var(--ink);
+    border: 2px solid var(--accent);
+    color: var(--paper);
+    font-family: 'PT Serif', serif;
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .mark__name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: var(--rule);
+    padding: 7px 12px;
+  }
+  .main {
+    display: flex;
+    align-items: center;
+    gap: 56px;
+  }
+  .text {
+    flex: 1.15;
+  }
+  .title {
+    font-family: 'PT Serif', serif;
+    font-size: 72px;
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .title em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .subtitle {
+    margin-top: 22px;
+    font-size: 24px;
+    line-height: 1.45;
+    color: var(--muted);
+    max-width: 560px;
+  }
+  .device-wrap {
+    flex-shrink: 0;
+    width: 300px;
+    display: flex;
+    justify-content: center;
+  }
+  .phone {
+    width: 230px;
+    height: 460px;
+    background: var(--ink);
+    border-radius: 28px;
+    padding: 10px;
+    transform: rotate(3deg);
+  }
+  .phone__screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    background: var(--paper-2);
+  }
+  .phone__screen img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: var(--rule);
+    padding-top: 22px;
+  }
+  .tags {
+    display: flex;
+    gap: 10px;
+  }
+  .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink);
+    border: var(--rule);
+    padding: 7px 12px;
+  }
+  .url {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="top">
+      <div class="mark">
+        <div class="mark__box">ЮЗ</div>
+        <div class="mark__name">Заботкин Юрий</div>
+      </div>
+      <div class="eyebrow">Unity Developer · Playable Ads</div>
+    </div>
+
+    <div class="main">
+      <div class="text">
+        <div class="title">Делаю плееблы<br>и игры, которые<br><em>запускают</em></div>
+        <div class="subtitle">Senior Unity Developer. 4.5+ года в мобильных играх и playable ads — от концепта до адаптации под все рекламные сети.</div>
+      </div>
+      <div class="device-wrap">
+        <div class="phone">
+          <div class="phone__screen">
+            <img src="../Playables%20Icons/Legendale.png" alt="">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom">
+      <div class="tags">
+        <span class="tag">Unity</span>
+        <span class="tag">Playable Ads</span>
+        <span class="tag">iOS / Android</span>
+      </div>
+      <div class="url">zabotkin.dev</div>
+    </div>
+  </div>
+</body>
+</html>

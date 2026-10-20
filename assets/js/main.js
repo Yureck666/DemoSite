@@ -1130,6 +1130,16 @@
     document.title = d.meta.title;
     var metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) metaDesc.setAttribute("content", d.meta.description);
+    ["meta[property=\"og:title\"]", "meta[name=\"twitter:title\"]"].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) el.setAttribute("content", d.meta.title);
+    });
+    ["meta[property=\"og:description\"]", "meta[name=\"twitter:description\"]"].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) el.setAttribute("content", d.meta.description);
+    });
+    var ogLocale = document.querySelector('meta[property="og:locale"]');
+    if (ogLocale) ogLocale.setAttribute("content", lang === "en" ? "en_US" : "ru_RU");
 
     renderHeader(d);
     renderHero(d);
