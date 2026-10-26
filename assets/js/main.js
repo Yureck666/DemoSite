@@ -724,13 +724,12 @@
      height is rock solid. Clicking one hands it the red "active" border,
      scales it up, and centers it.
 
-     The row is paged entirely by code, never by the user dragging or
-     swiping it: .playables-grid (see CSS) is a plain overflow:hidden
-     viewport, and .playables-track — the actual flex row of cards — is
-     moved by setting its own `transform: translateX()`, which touch/click
-     never drives on its own. A swipe or tap landing anywhere in this area
-     is therefore just a normal page-scroll/tap everywhere outside it
-     would be: nothing here intercepts it. */
+     The row is paged by code: .playables-grid (see CSS) is a plain
+     overflow:hidden viewport, and .playables-track — the actual flex row
+     of cards — is moved by setting its own `transform: translateX()`.
+     A horizontal swipe is also wired below to step to the next/previous
+     card the same way a nav-icon click would; it doesn't drag the track
+     live under the finger, it just pages on release past a threshold. */
   function setupPlayablesCarousel(grid, track, entries, navButtons) {
     var activeIndex = -1;
     var trackX = 0;
@@ -799,6 +798,43 @@
         btn.addEventListener("click", function () { selectPlayable(index); });
       });
     }
+
+    // Swipe paging — safe now that cards only ever hold a muted preview
+    // video, never a live playable iframe (see the modal comment up top),
+    // so there's nothing underneath a touch to fight with. A horizontal
+    // drag past SWIPE_THRESHOLD steps to the next/previous card, same as
+    // tapping a nav icon; anything more vertical than horizontal is left
+    // alone so the page still scrolls normally.
+    var SWIPE_THRESHOLD = 40;
+    var touchStartX = 0, touchStartY = 0, touchTracking = false, touchHorizontal = false, touchMoved = false;
+    grid.addEventListener("touchstart", function (e) {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchTracking = true;
+      touchHorizontal = false;
+      touchMoved = false;
+    }, { passive: true });
+    grid.addEventListener("touchmove", function (e) {
+      if (!touchTracking || e.touches.length !== 1) return;
+      var dx = e.touches[0].clientX - touchStartX;
+      var dy = e.touches[0].clientY - touchStartY;
+      if (!touchMoved && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+        touchMoved = true;
+        touchHorizontal = Math.abs(dx) > Math.abs(dy);
+      }
+      if (touchHorizontal) e.preventDefault();
+    }, { passive: false });
+    grid.addEventListener("touchend", function (e) {
+      if (!touchTracking) return;
+      touchTracking = false;
+      if (!touchHorizontal) return;
+      var dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+      var next = activeIndex + (dx < 0 ? 1 : -1);
+      if (next < 0 || next >= entries.length) return;
+      selectPlayable(next);
+    }, { passive: true });
 
     if (grid._carouselResize) window.removeEventListener("resize", grid._carouselResize);
     var resizeTimer = null;

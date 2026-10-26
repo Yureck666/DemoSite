@@ -611,6 +611,11 @@ body {
      masked the burst/coin-flight animation underneath it for the highlight's duration. */
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  /* The background image (1926x1506) draws its solid pill only inside a 415,483–1508,992
+     sub-rect (a faint low-alpha falloff extends a bit further but isn't visibly part of the
+     button), stretched to fill this oversized box. Without clip-path, clicks/taps anywhere in
+     that surrounding padding still hit the button. */
+  clip-path: inset(32.07% 21.7% 34.13% 21.55% round 999px);
 }
 /* Keyboard focus ring hugs the pill instead of ballooning outward from this oversized button. */
 .gamefeel__btn:focus-visible { outline-offset: -6.4px; }
@@ -760,22 +765,20 @@ html[lang="en"] .gamefeel__btn { background-image: url("../button_en.png"); }
 }
 .playables-caption--nav { margin: var(--sp-1) 0 var(--sp-2); }
 
-/* Playables podium — paged entirely by code (clicking a phone), never by
-   the user dragging or swiping it. Earlier attempts tried to block just
-   the horizontal axis on a native scroll container (touch-action, then a
-   touchmove guard) and both fought an active phone's iframe unreliably —
-   touch-action doesn't reach across a frame boundary, and a JS guard can
-   only preventDefault what it's already too late to stop. Simplest fix:
-   don't make this a touch-scrollable container at all. .playables-grid is
-   just a clipping viewport (overflow hidden, fixed in place); the actual
-   row of cards is .playables-track below, repositioned solely by setting
-   its own transform from JS (see setupPlayablesCarousel). Nothing here
-   responds to a touch or click other than the explicit per-phone handlers
-   — a swipe landing anywhere in this area, iframe included, behaves
-   exactly like it would outside it. */
+/* Playables podium — paged by code (clicking a phone, a nav icon, or a
+   swipe on mobile; see setupPlayablesCarousel). .playables-grid is just a
+   clipping viewport (overflow hidden, fixed in place); the actual row of
+   cards is .playables-track below, repositioned by setting its own
+   transform from JS — never natively scrolled. touch-action: pan-y tells
+   the browser not to attempt its own scroll/zoom on a horizontal drag
+   here, leaving that gesture free for the JS swipe handler while vertical
+   page scrolling still passes through untouched. Safe to let touch land
+   here at all now that cards hold only a muted preview video, never a
+   live playable iframe — that only ever lives in the shared modal. */
 .playables-grid {
   overflow: hidden;
   padding: 0 var(--sp-2) var(--sp-1);
+  touch-action: pan-y;
 }
 .playables-track {
   display: flex;
